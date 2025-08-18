@@ -1,0 +1,57 @@
+"use client";
+
+import { useState } from "react";
+import { Button } from "@/components/ui/button";
+import { confirmPayment } from "@/services/api";
+
+interface PaymentActionsProps {
+  paymentId: string;
+  onPaymentConfirmed: () => void;
+  onCancel: () => void;
+}
+
+export function PaymentActions({
+  paymentId,
+  onPaymentConfirmed,
+  onCancel,
+}: PaymentActionsProps) {
+  const [isConfirming, setIsConfirming] = useState(false);
+
+  const handleConfirmPayment = async () => {
+    setIsConfirming(true);
+    try {
+      const result = await confirmPayment(paymentId);
+      if (result.status === "ok") {
+        onPaymentConfirmed();
+      } else {
+        // Handle error - in a real app you'd show a toast or error message
+        console.error("Payment confirmation failed:", result.message);
+      }
+    } catch (error) {
+      console.error("Payment confirmation error:", error);
+    } finally {
+      setIsConfirming(false);
+    }
+  };
+
+  return (
+    <div className="flex gap-4 px-8 justify-center">
+      <Button
+        variant="outline"
+        onClick={onCancel}
+        className="flex-1 rounded-none py-10 px-18 w-full font-sans text-base font-medium text-black-text border-grey-dark-bg hover:bg-red-accent-bg cursor-pointer"
+        disabled={isConfirming}
+      >
+        Cancel
+      </Button>
+
+      <Button
+        onClick={handleConfirmPayment}
+        disabled={isConfirming}
+        className="flex-1 rounded-none py-10 px-18 w-full font-sans text-base font-medium text-white bg-green-600 hover:bg-green-700 cursor-pointer"
+      >
+        {isConfirming ? "Processing..." : "I have Paid"}
+      </Button>
+    </div>
+  );
+}

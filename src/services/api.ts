@@ -1,0 +1,240 @@
+import {
+  PaymentData,
+  ApiResponse,
+  ApiPaymentData,
+  PaymentMethod,
+  BankTransferDetails,
+  PaymentMethods,
+} from "@/types/payment";
+
+// Helper function to get currency symbol
+const getCurrencySymbol = (currency: string): string => {
+  const currencyMap: { [key: string]: string } = {
+    NGNKOBO: "₦",
+    ZARCENT: "R",
+    USD: "$",
+    EUR: "€",
+    GBP: "£",
+  };
+  return currencyMap[currency] || currency;
+};
+
+// Helper function to convert kobo/cent to main currency
+const convertToMainCurrency = (amount: number, currency: string): number => {
+  if (currency === "NGNKOBO" || currency === "ZARCENT") {
+    return amount / 100; // Convert kobo/cent to naira/rand
+  }
+  return amount;
+};
+
+// Helper function to get payment method name
+const getPaymentMethodName = (method: string): string => {
+  const methodMap: { [key: string]: string } = {
+    BANKTRANSFER: "Bank Transfer",
+    LIGHTNING: "Lightning Invoice",
+  };
+  return methodMap[method] || method;
+};
+
+// Transform API data to internal format
+const transformApiData = (
+  apiData: ApiPaymentData,
+  merchantLogo?: string
+): PaymentData => {
+  const availablePaymentMethods: PaymentMethod[] = [
+    {
+      id: "bank_transfer",
+      name: "Bank Transfer",
+      type: PaymentMethods.BANKTRANSFER,
+    },
+    {
+      id: "lightning",
+      name: "Lightning Invoice",
+      type: PaymentMethods.LIGHTNING,
+    },
+  ];
+
+  // Add Lightning method if invoice is available
+  if (apiData.invoice) {
+    availablePaymentMethods.push({
+      id: "lightning_invoice",
+      name: "Lightning Invoice",
+      type: PaymentMethods.LIGHTNING,
+    });
+  }
+
+  const selectedMethod =
+    availablePaymentMethods.find(
+      (method) => method.type === apiData.paymentMethod
+    ) || availablePaymentMethods[0];
+
+  const bankTransferDetails: BankTransferDetails | undefined =
+    apiData.paymentMethod === PaymentMethods.BANKTRANSFER
+      ? {
+          bankName: apiData.bankName,
+          accountNumber: apiData.ngnBankAccountNumber,
+          accountName: apiData.ngnAccountName,
+          amount: convertToMainCurrency(
+            apiData.totalAmountInSourceCurrency,
+            apiData.sourceCurrency
+          ),
+          currency: getCurrencySymbol(apiData.sourceCurrency),
+          expiresAt: apiData.expiry,
+          orderId: apiData.orderId,
+        }
+      : undefined;
+
+  return {
+    id: apiData.id,
+    merchantName: apiData?.merchantName,
+    merchantLogo:
+      merchantLogo ||
+      "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAFAAAAAiCAYAAADI+15nAAAACXBIWXMAAAsTAAALEwEAmpwYAAAAAXNSR0IArs4c6QAAAARnQU1BAACxjwv8YQUAAARHSURBVHgB5VrtkdQ4EH1M3f+bi4C+CG4zOBEBm8GaCNgMxkSwSwRjIgAi8BABSwQ2EewSAVhlq9D2PH3afFTxqrrGlrqlVqu73bIH+Pk44vdBM5HBCjxZfmWinvQ/TPR+orvlOgZmmDcTtd69Web5h4xnvOv9RDeq/8NEnWrbL3JPJxon+jTRabnOQb/IXGMlZKKvHt1j3p1cvFTyjkTxHZf2FmX6fEXccy1/p3gFeXPYte6xEuJNPiA9uZYdcL7gW8J7v/T1GWOWGNDhFo+d4DLC23i8l1gJQZ3xLI44Xywbp1E8Bml9Sg1oPeleyV0FeP1NT21oErIM1KAMAh66DeF9i7SHxsbNMaBFi/N0JIrngoy/KowF846U4iO497HxNd894vrUGtAgnU5Y1LSowM67fo0yNJh3UuMZabO7eyJtBtvjjrQ9V/dfCM//WAFB+WL8HJLyEmvoa8L/FmF9aj0Q4GnF14XlylRejkJQlgMO4CEpgbHd+ExmH5D5UQY0y2+HdKhno8R4Aq5gG+D3S4SeyF1nzrHGgMPSbtfp0o4B39AfjmNEQQajrrVsT2QE9QZknu42SefsTcM4B5fIL1ssRN2Hcs+eyG31FB4i+rTIz8ubYEDZwgxpu0U6/KVwHh9+hAz4bjRBXj24ydGOoQH3Pgnw+/nGh0E6BQjqDCiK3zfERUCmRzjkN4OAe18bkTGRPjaWUfOVGNAa6oC5BrwNzG0Csqy86pGJXSafVU5U24jz10s+HiJ9b0hb6kD/L2YjiCIr12B+RTYseo1K1nrfXWDcjrQZbBjGgrIHh5ORSH+qJhTUh7Dz7t7T0STkWBi32Ahs8CEhI6gb13jyNQa0sJvgn9FvkNbHoHyNWWhQ9uDwFUohlnsE9QZ08/uyhwT/5kc7hwHlC3FnzRRiNaFUzJvSvUnws/IqebT7K9Jnd01U2zjRK8SRa0CLE84fHs1E77AeIx7rf0D8Wwnru8KcC2MPRAoBD902UzYXBjyMBes9sEd5SNbIUBxRl1RZsSoR/lAYsyPjFgZMFcjFNSGrAw14vkiFrkXo1VQINjRqasIcsLBLpZYO/HNrUI4Z8BgYuEMcdpKRtF8k5Fi+u8KvgfsOrtGEBHaEUQhfjvcJ+AkgtesnVCTpDAjq0JG25yHmnZrwQHis8UakwYzwEnko/R6TgoB7Ug5O4GFsGLNvwFDZ0iENCbQ1yEOHbSE4/4hVArahhjHuvAkb0p/rfVB8grKP1SPWLdiHSxn25cFDoC+FE2mj0eQMeEP6RuR7hq+Y4HstV4LakNOwefeE2Xjak/5DHk4o+AzboO686+D4DPjXujZvmGBNWFoH6qe+rgcFXH+N6xwd7N/bWsx/D/MRepwzyEJPA/12nHcJWQdb//0d4P2Mx14xLqTffNt7F7oujFvMpZEsMi+W34vl170rNGocvRkPUO8Vn+DPgsHjHDliJb4BHBJc030hTZgAAAAASUVORK5CYII=",
+    description: `Payment for order ${apiData.orderId}`,
+    amount: convertToMainCurrency(
+      apiData.amountInSourceCurrency,
+      apiData.sourceCurrency
+    ),
+    totalAmount: convertToMainCurrency(
+      apiData.totalAmountInSourceCurrency,
+      apiData.sourceCurrency
+    ),
+    fees: convertToMainCurrency(
+      apiData.transactionFeesInSourceCurrency,
+      apiData.sourceCurrency
+    ),
+    currency: getCurrencySymbol(apiData.sourceCurrency),
+    targetCurrency: getCurrencySymbol(apiData.targetCurrency),
+    expiresAt: apiData.expiry,
+    paymentMethods: availablePaymentMethods,
+    selectedMethod,
+    bankTransferDetails,
+    status: apiData.isValid ? "pending" : "expired",
+    orderId: apiData.orderId,
+    exchangeRate: apiData.exchangeRate,
+    hash: apiData.hash,
+  };
+};
+
+// Mock API data to match the original design image
+const mockApiData: ApiPaymentData = {
+  id: "808a172a-082d-45f5-b410-14d93c58245e",
+  exchangeRate: 2063641.875,
+  usdToTargetCurrencyRate: 17.5708238,
+  sourceToTargetCurrencyRate: 87.84,
+  sourceCurrency: "NGNKOBO",
+  targetCurrency: "ZARCENT",
+  transactionFeesInSourceCurrency: 0,
+  transactionFeesInTargetCurrency: 0,
+  amountInSourceCurrency: 95000000, // 950,000.00 NGN in kobo
+  amountInTargetCurrency: 95000000,
+  paymentMethod: "BANKTRANSFER",
+  expiry: new Date(Date.now() + 2.5 * 60 * 60 * 1000).toISOString(),
+  isValid: true,
+  invoice: "",
+  hash: "689e426b86037b0012075e28",
+  totalAmountInSourceCurrency: 95000000, // 950,000.00 NGN in kobo
+  customerInternalFee: 0,
+  bankName: "Guaranty TrustBank",
+  ngnBankAccountNumber: "2008113584",
+  ngnAccountName: "Mava Digital Solutions Limited",
+  orderId: "17491-4010",
+  merchantName: "ZARA",
+};
+
+export async function fetchPaymentData(
+  paymentId: string,
+  merchantLogo?: string
+): Promise<ApiResponse<PaymentData>> {
+  try {
+    // Real API implementation - uncomment and modify for production:
+    /*
+    const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/payments/${paymentId}`, {
+      method: 'GET',
+      headers: {
+        'Content-Type': 'application/json',
+        // Add authentication headers if needed
+        // 'Authorization': `Bearer ${token}`,
+      },
+    });
+    
+    if (!response.ok) {
+      throw new Error(`HTTP error! status: ${response.status}`);
+    }
+    
+    const apiResponse: ApiResponse<ApiPaymentData> = await response.json();
+    
+    if (apiResponse.status === 'ok') {
+      const transformedData = transformApiData(apiResponse.data, merchantLogo);
+      return {
+        status: 'ok',
+        data: transformedData,
+      };
+    } else {
+      throw new Error(apiResponse.message || 'API returned error status');
+    }
+    */
+
+    // For demo purposes, simulate API delay and return mock data
+    await new Promise((resolve) => setTimeout(resolve, 500));
+    const transformedData = transformApiData(mockApiData, merchantLogo);
+
+    return {
+      status: "ok",
+      data: transformedData,
+    };
+  } catch (error) {
+    console.error("Error fetching payment data:", error);
+    return {
+      status: "error",
+      data: transformApiData(mockApiData, merchantLogo), // Fallback
+      message:
+        error instanceof Error ? error.message : "Failed to fetch payment data",
+    };
+  }
+}
+
+export async function confirmPayment(
+  paymentId: string
+): Promise<ApiResponse<{ status: string }>> {
+  try {
+    // Real API implementation - uncomment and modify for production:
+    /*
+    const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/payments/${paymentId}/confirm`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        // Add authentication headers if needed
+        // 'Authorization': `Bearer ${token}`,
+      },
+      body: JSON.stringify({
+        paymentId,
+        // Add any additional confirmation data
+      }),
+    });
+    
+    if (!response.ok) {
+      throw new Error(`HTTP error! status: ${response.status}`);
+    }
+    
+    const apiResponse: ApiResponse<{ status: string }> = await response.json();
+    return apiResponse;
+    */
+
+    // For demo purposes, simulate API delay
+    await new Promise((resolve) => setTimeout(resolve, 1000));
+
+    return {
+      status: "ok",
+      data: { status: "confirmed" },
+    };
+  } catch (error) {
+    console.error("Error confirming payment:", error);
+    return {
+      status: "error",
+      data: { status: "error" },
+      message:
+        error instanceof Error ? error.message : "Failed to confirm payment",
+    };
+  }
+}
