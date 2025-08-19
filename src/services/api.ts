@@ -1,23 +1,15 @@
 import {
-  PaymentData,
-  ApiResponse,
+  formatAmountToHighestDenomination,
+  getCurrencySymbol,
+} from "@/lib/utils";
+import {
   ApiPaymentData,
-  PaymentMethod,
+  ApiResponse,
   BankTransferDetails,
-  PaymentMethods,
+  PaymentData,
+  PaymentMethod,
 } from "@/types/payment";
-
-// Helper function to get currency symbol
-const getCurrencySymbol = (currency: string): string => {
-  const currencyMap: { [key: string]: string } = {
-    NGNKOBO: "₦",
-    ZARCENT: "R",
-    USD: "$",
-    EUR: "€",
-    GBP: "£",
-  };
-  return currencyMap[currency] || currency;
-};
+import { PaymentMethods } from "@/types/primitives";
 
 // Helper function to convert kobo/cent to main currency
 const convertToMainCurrency = (amount: number, currency: string): number => {
@@ -25,15 +17,6 @@ const convertToMainCurrency = (amount: number, currency: string): number => {
     return amount / 100; // Convert kobo/cent to naira/rand
   }
   return amount;
-};
-
-// Helper function to get payment method name
-const getPaymentMethodName = (method: string): string => {
-  const methodMap: { [key: string]: string } = {
-    BANKTRANSFER: "Bank Transfer",
-    LIGHTNING: "Lightning Invoice",
-  };
-  return methodMap[method] || method;
 };
 
 // Transform API data to internal format
@@ -74,8 +57,8 @@ const transformApiData = (
           bankName: apiData.bankName,
           accountNumber: apiData.ngnBankAccountNumber,
           accountName: apiData.ngnAccountName,
-          amount: convertToMainCurrency(
-            apiData.totalAmountInSourceCurrency,
+          amount: formatAmountToHighestDenomination(
+            apiData.amountInSourceCurrency,
             apiData.sourceCurrency
           ),
           currency: getCurrencySymbol(apiData.sourceCurrency),
@@ -123,17 +106,17 @@ const mockApiData: ApiPaymentData = {
   usdToTargetCurrencyRate: 17.5708238,
   sourceToTargetCurrencyRate: 87.84,
   sourceCurrency: "NGNKOBO",
-  targetCurrency: "ZARCENT",
+  targetCurrency: "BTCSAT",
   transactionFeesInSourceCurrency: 0,
   transactionFeesInTargetCurrency: 0,
-  amountInSourceCurrency: 95000000, // 950,000.00 NGN in kobo
-  amountInTargetCurrency: 95000000,
+  amountInSourceCurrency: 95_000_000, // 950,000.00 NGN in kobo
+  amountInTargetCurrency: 95_000, // 950,000.00 BTC in satoshis
   paymentMethod: "BANKTRANSFER",
   expiry: new Date(Date.now() + 2.5 * 60 * 60 * 1000).toISOString(),
   isValid: true,
   invoice: "",
   hash: "689e426b86037b0012075e28",
-  totalAmountInSourceCurrency: 95000000, // 950,000.00 NGN in kobo
+  totalAmountInSourceCurrency: 95_000_000, // 950,000.00 NGN in kobo
   customerInternalFee: 0,
   bankName: "Guaranty TrustBank",
   ngnBankAccountNumber: "2008113584",

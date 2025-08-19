@@ -1,3 +1,5 @@
+import { PaymentMethods, TransactionCurrencies } from "./primitives";
+
 export interface PaymentMethod {
   id: string;
   name: string;
@@ -9,9 +11,9 @@ export interface ApiPaymentData {
   id: string;
   exchangeRate: number;
   usdToTargetCurrencyRate: number;
-  sourceToTargetCurrencyRate: number;
-  sourceCurrency: string;
-  targetCurrency: string;
+  sourceToTargetCurrencyRate?: number;
+  sourceCurrency: TransactionCurrency;
+  targetCurrency: TransactionCurrency;
   transactionFeesInSourceCurrency: number;
   transactionFeesInTargetCurrency: number;
   amountInSourceCurrency: number;
@@ -67,10 +69,8 @@ export interface ApiResponse<T> {
   message?: string;
 }
 
-export const PaymentMethods = {
-  BANKTRANSFER: "BANKTRANSFER",
-  LIGHTNING: "LIGHTNING",
-} as const;
-
 export type PaymentMethodType =
   (typeof PaymentMethods)[keyof typeof PaymentMethods];
+
+export type TransactionCurrency =
+  (typeof TransactionCurrencies)[keyof typeof TransactionCurrencies];

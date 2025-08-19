@@ -1,10 +1,7 @@
 "use client";
 
-import {
-  PaymentMethod,
-  PaymentMethods as PaymentMethodsEnum,
-  PaymentMethodType,
-} from "@/types/payment";
+import { PaymentMethod, PaymentMethodType } from "@/types/payment";
+import { PaymentMethods as PaymentMethodsEnum } from "@/types/primitives";
 import { Card } from "@/components/ui/card";
 
 import { Bank, Bitcoin } from "@/public/icons";
@@ -15,27 +12,57 @@ interface PaymentMethodsProps {
   onMethodSelect: (method: PaymentMethod) => void;
 }
 
+interface IconConfig {
+  icon: React.ComponentType<{ className?: string }>;
+  padding: string;
+  size: string;
+}
+
+const PAYMENT_METHOD_ICONS: Record<PaymentMethodType, IconConfig> = {
+  [PaymentMethodsEnum.BANKTRANSFER]: {
+    icon: Bank,
+    padding: "p-2",
+    size: "w-4 h-4",
+  },
+  [PaymentMethodsEnum.LIGHTNING]: {
+    icon: Bitcoin,
+    padding: "p-1",
+    size: "w-6 h-6",
+  },
+};
+
+const DEFAULT_ICON_CONFIG: IconConfig = {
+  icon: Bitcoin,
+  padding: "p-2",
+  size: "w-4 h-4",
+};
+
 const getMethodIcon = (type: PaymentMethodType) => {
-  switch (type) {
-    case PaymentMethodsEnum.BANKTRANSFER:
-      return (
-        <div className="rounded-full p-2 bg-white">
-          <Bank className="w-4 h-4" />
-        </div>
-      );
-    case PaymentMethodsEnum.LIGHTNING:
-      return (
-        <div className="rounded-full p-1 bg-white">
-          <Bitcoin className="w-6 h-6" />
-        </div>
-      );
-    default:
-      return (
-        <div className="rounded-full p-2 bg-white">
-          <Bitcoin className="w-4 h-4" />
-        </div>
-      );
-  }
+  const config = PAYMENT_METHOD_ICONS[type] || DEFAULT_ICON_CONFIG;
+  const IconComponent = config.icon;
+
+  return (
+    <div className={`rounded-full bg-white ${config.padding}`}>
+      <IconComponent className={config.size} />
+    </div>
+  );
+};
+
+const getCardClassName = (isSelected: boolean): string => {
+  const baseClasses =
+    "flex flex-col justify-center py-4 px-8 cursor-pointer transition-all border-none w-full h-24 rounded-none hover:border-none shadow-none";
+  const conditionalClasses = isSelected
+    ? "bg-grey-dark-bg"
+    : "bg-transparent hover:bg-grey-dark-bg";
+
+  return `${baseClasses} ${conditionalClasses}`;
+};
+
+const getTextClassName = (isSelected: boolean): string => {
+  const baseClasses = "font-inter text-black-text text-sm leading-5";
+  const conditionalClasses = isSelected ? "font-medium" : "font-normal";
+
+  return `${baseClasses} ${conditionalClasses}`;
 };
 
 export function PaymentMethods({
@@ -51,30 +78,24 @@ export function PaymentMethods({
         </h2>
       </div>
       <div className="space-y-2">
-        {paymentMethods.map((method) => (
-          <Card
-            key={method.id}
-            className={`flex flex-col justify-center py-4 px-8 cursor-pointer transition-all border-none w-full h-24 rounded-none hover:border-none shadow-none ${
-              selectedMethod?.id === method.id
-                ? "bg-grey-dark-bg"
-                : "bg-transparent hover:bg-grey-dark-bg"
-            }`}
-            onClick={() => onMethodSelect(method)}
-          >
-            <div className="flex items-center gap-3 h-full">
-              {getMethodIcon(method.type)}
-              <span
-                className={`font-inter text-black-text text-sm leading-5 ${
-                  selectedMethod?.id === method.id
-                    ? "font-medium"
-                    : "font-normal"
-                }`}
-              >
-                {method.name}
-              </span>
-            </div>
-          </Card>
-        ))}
+        {paymentMethods.map((method) => {
+          const isSelected = selectedMethod?.id === method.id;
+
+          return (
+            <Card
+              key={method.id}
+              className={getCardClassName(isSelected)}
+              onClick={() => onMethodSelect(method)}
+            >
+              <div className="flex items-center gap-3 h-full">
+                {getMethodIcon(method.type)}
+                <span className={getTextClassName(isSelected)}>
+                  {method.name}
+                </span>
+              </div>
+            </Card>
+          );
+        })}
       </div>
     </div>
   );

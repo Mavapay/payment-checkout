@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+
 import { Button } from "@/components/ui/button";
 import { confirmPayment } from "@/services/api";
 
@@ -24,7 +25,6 @@ export function PaymentActions({
       if (result.status === "ok") {
         onPaymentConfirmed();
       } else {
-        // Handle error - in a real app you'd show a toast or error message
         console.error("Payment confirmation failed:", result.message);
       }
     } catch (error) {
@@ -39,7 +39,7 @@ export function PaymentActions({
       <Button
         variant="outline"
         onClick={onCancel}
-        className="flex-1 rounded-none py-10 px-18 w-full font-sans text-base font-medium text-black-text border-grey-dark-bg hover:bg-red-accent-bg cursor-pointer"
+        className="flex-1 rounded-none py-10 px-18 w-full font-sans text-base font-medium text-black-text border-grey-dark-bg hover:text-red-primary-text hover:bg-red-accent-bg-light cursor-pointer"
         disabled={isConfirming}
       >
         Cancel

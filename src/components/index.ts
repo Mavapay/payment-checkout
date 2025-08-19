@@ -1,4 +1,4 @@
-export * from "./BankTransferDetails";
+export * from "./PaymentDetails"
 export * from "./PaymentActions";
 export * from "./PaymentFooter";
 export * from "./PaymentHeader";

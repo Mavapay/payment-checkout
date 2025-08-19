@@ -7,7 +7,6 @@ import { fetchPaymentData } from "@/services/api";
 import {
   PaymentData,
   PaymentMethod,
-  PaymentMethods as PaymentMethodsEnum,
 } from "@/types/payment";
 
 import {
@@ -15,13 +14,89 @@ import {
   PaymentFooter,
   PaymentHeader,
   PaymentMethods,
-  BankTransferDetails,
+  PaymentDetails,
 } from "./";
 import { Spinner } from "./Spinner";
 
 interface CheckoutPageProps {
   paymentId: string;
 }
+
+interface ErrorDisplayProps {
+  error: string | null;
+}
+
+const ErrorDisplay = ({ error }: ErrorDisplayProps) => (
+  <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+    <Card className="p-8 max-w-md w-full mx-4">
+      <div className="text-center text-red-primary-text">
+        <h2 className="text-xl font-semibold mb-2">Error</h2>
+        <p>{error || "Payment not found"}</p>
+      </div>
+    </Card>
+  </div>
+);
+
+interface PaymentHeaderSectionProps {
+  paymentData: PaymentData;
+}
+
+const PaymentHeaderSection = ({ paymentData }: PaymentHeaderSectionProps) => (
+  <div className="bg-white border-b border-grey-dark-bg">
+    <div className="max-w-7xl mx-auto">
+      <PaymentHeader
+        merchantName={paymentData.merchantName}
+        merchantLogo={paymentData.merchantLogo}
+        expiresAt={paymentData.expiresAt}
+      />
+    </div>
+  </div>
+);
+
+interface PaymentContentSectionProps {
+  paymentData: PaymentData;
+  selectedMethod: PaymentMethod | null;
+  onMethodSelect: (method: PaymentMethod) => void;
+  onPaymentConfirmed: () => void;
+  onCancel: () => void;
+}
+
+const PaymentContentSection = ({ 
+  paymentData, 
+  selectedMethod, 
+  onMethodSelect, 
+  onPaymentConfirmed, 
+  onCancel 
+}: PaymentContentSectionProps) => (
+  <div className="max-w-4xl mx-auto p-10">
+    <div className="flex justify-between border border-grey-dark-bg bg-white rounded-xl">
+      <div className="space-y-6">
+        <PaymentMethods
+          paymentMethods={paymentData.paymentMethods}
+          selectedMethod={selectedMethod || undefined}
+          onMethodSelect={onMethodSelect}
+        />
+      </div>
+
+      <div className="space-y-6 py-8 flex flex-col justify-center items-center w-full">
+        <p className="font-sans font-normal text-sm leading-6 tracking-normal">
+          {paymentData.description}
+        </p>
+
+        {paymentData.bankTransferDetails && (
+          <PaymentDetails details={paymentData.bankTransferDetails} />
+        )}
+        <div className="">
+          <PaymentActions
+            paymentId={paymentData.id}
+            onPaymentConfirmed={onPaymentConfirmed}
+            onCancel={onCancel}
+          />
+        </div>
+      </div>
+    </div>
+  </div>
+);
 
 export function CheckoutPage({ paymentId }: CheckoutPageProps) {
   const [paymentData, setPaymentData] = useState<PaymentData | null>(null);
@@ -77,58 +152,22 @@ export function CheckoutPage({ paymentId }: CheckoutPageProps) {
   }
 
   if (error || !paymentData) {
-    return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-        <Card className="p-8 max-w-md w-full mx-4">
-          <div className="text-center text-red-600">
-            <h2 className="text-xl font-semibold mb-2">Error</h2>
-            <p>{error || "Payment not found"}</p>
-          </div>
-        </Card>
-      </div>
-    );
+    return <ErrorDisplay error={error} />;
   }
 
   return (
     <div className="min-h-screen bg-green-accent-bg">
-      <div className="bg-white border-b border-grey-dark-bg">
-        <div className="max-w-7xl mx-auto">
-          <PaymentHeader
-            merchantName={paymentData.merchantName}
-            merchantLogo={paymentData.merchantLogo}
-            expiresAt={paymentData.expiresAt}
-          />
-        </div>
-      </div>
-
-      <div className="max-w-4xl mx-auto p-10">
-        <div className="flex justify-between border border-grey-dark-bg bg-white rounded-xl">
-          <div className="space-y-6">
-            <PaymentMethods
-              paymentMethods={paymentData.paymentMethods}
-              selectedMethod={selectedMethod || undefined}
-              onMethodSelect={handleMethodSelect}
-            />
-          </div>
-
-          <div className="space-y-6 py-8 flex flex-col justify-center items-center w-full">
-            <p className="font-sans font-normal text-sm leading-6 tracking-normal">
-              {paymentData.description}
-            </p>
-
-            {paymentData.bankTransferDetails && (
-              <BankTransferDetails details={paymentData.bankTransferDetails} />
-            )}
-            <div className="">
-              <PaymentActions
-                paymentId={paymentData.id}
-                onPaymentConfirmed={handlePaymentConfirmed}
-                onCancel={handleCancel}
-              />
-            </div>
-          </div>
-        </div>
-      </div>
+      <PaymentHeaderSection 
+        paymentData={paymentData}
+      />
+      
+      <PaymentContentSection 
+        paymentData={paymentData}
+        selectedMethod={selectedMethod}
+        onMethodSelect={handleMethodSelect}
+        onPaymentConfirmed={handlePaymentConfirmed}
+        onCancel={handleCancel}
+      />
 
       <PaymentFooter />
     </div>

@@ -51,7 +51,8 @@
   --color-orange-accent-text: #C17C08;
   --color-orange-accent-bg: #FEF9F0;
   --color-orange-accent-border: #FBE8C6;
-  --color-red-accent-bg: #BE3232;
+  --color-red-primary-text: #AE0707;
+  --color-red-accent-bg-light: #F5F5F5;
 }
 
 :root {
