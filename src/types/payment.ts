@@ -1,4 +1,8 @@
-import { PaymentMethods, TransactionCurrencies } from "./primitives";
+import {
+  PaymentMethods,
+  PaymentTypes,
+  TransactionCurrencies,
+} from "./primitives";
 
 export interface PaymentMethod {
   id: string;
@@ -43,6 +47,15 @@ export interface BankTransferDetails {
   orderId?: string;
 }
 
+export interface LightningInvoiceDetails {
+  invoice: string;
+  amount: number;
+  currency: string;
+  satsAmount: number;
+  expiresAt: string;
+  qrCodeData: string;
+}
+
 export interface PaymentData {
   id: string;
   merchantName: string;
@@ -57,6 +70,7 @@ export interface PaymentData {
   paymentMethods: PaymentMethod[];
   selectedMethod?: PaymentMethod;
   bankTransferDetails?: BankTransferDetails;
+  lightningInvoiceDetails?: LightningInvoiceDetails;
   status: "pending" | "completed" | "expired" | "cancelled";
   orderId: string;
   exchangeRate: number;
@@ -74,3 +88,5 @@ export type PaymentMethodType =
 
 export type TransactionCurrency =
   (typeof TransactionCurrencies)[keyof typeof TransactionCurrencies];
+
+export type PaymentType = (typeof PaymentTypes)[keyof typeof PaymentTypes];

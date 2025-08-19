@@ -10,6 +10,7 @@ interface PaymentMethodsProps {
   paymentMethods: PaymentMethod[];
   selectedMethod?: PaymentMethod;
   onMethodSelect: (method: PaymentMethod) => void;
+  isLoading?: boolean;
 }
 
 interface IconConfig {
@@ -69,6 +70,7 @@ export function PaymentMethods({
   paymentMethods,
   selectedMethod,
   onMethodSelect,
+  isLoading = false,
 }: PaymentMethodsProps) {
   return (
     <div className="space-y-4 bg-grey-accent-bg py-8 rounded-l-xl h-full w-56 flex flex-col justify-left gap-5">
@@ -85,13 +87,18 @@ export function PaymentMethods({
             <Card
               key={method.id}
               className={getCardClassName(isSelected)}
-              onClick={() => onMethodSelect(method)}
+              onClick={() => !isLoading && onMethodSelect(method)}
             >
               <div className="flex items-center gap-3 h-full">
                 {getMethodIcon(method.type)}
                 <span className={getTextClassName(isSelected)}>
                   {method.name}
                 </span>
+                {isLoading && !isSelected && (
+                  <div className="ml-auto">
+                    <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-gray-400"></div>
+                  </div>
+                )}
               </div>
             </Card>
           );

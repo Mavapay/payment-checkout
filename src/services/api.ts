@@ -24,20 +24,16 @@ const transformApiData = (
   apiData: ApiPaymentData,
   merchantLogo?: string
 ): PaymentData => {
+  // Build available payment methods based on what's supported
   const availablePaymentMethods: PaymentMethod[] = [
     {
       id: "bank_transfer",
       name: "Bank Transfer",
       type: PaymentMethods.BANKTRANSFER,
     },
-    {
-      id: "lightning",
-      name: "Lightning Invoice",
-      type: PaymentMethods.LIGHTNING,
-    },
   ];
 
-  // Add Lightning method if invoice is available
+  // Add Lightning method only if invoice is available
   if (apiData.invoice) {
     availablePaymentMethods.push({
       id: "lightning_invoice",
@@ -46,10 +42,18 @@ const transformApiData = (
     });
   }
 
+  // Default priority: Lightning > Bank Transfer
+  const getDefaultMethod = () => {
+    const lightningMethod = availablePaymentMethods.find(m => m.type === PaymentMethods.LIGHTNING);
+    const bankTransferMethod = availablePaymentMethods.find(m => m.type === PaymentMethods.BANKTRANSFER);
+    
+    return lightningMethod || bankTransferMethod || availablePaymentMethods[0];
+  };
+
   const selectedMethod =
     availablePaymentMethods.find(
       (method) => method.type === apiData.paymentMethod
-    ) || availablePaymentMethods[0];
+    ) || getDefaultMethod();
 
   const bankTransferDetails: BankTransferDetails | undefined =
     apiData.paymentMethod === PaymentMethods.BANKTRANSFER
@@ -92,6 +96,14 @@ const transformApiData = (
     paymentMethods: availablePaymentMethods,
     selectedMethod,
     bankTransferDetails,
+    lightningInvoiceDetails: apiData.invoice ? {
+      invoice: apiData.invoice,
+      amount: convertToMainCurrency(apiData.totalAmountInSourceCurrency, apiData.sourceCurrency),
+      currency: getCurrencySymbol(apiData.sourceCurrency),
+      satsAmount: 126248, // Convert from amount - this would be calculated from the invoice
+      expiresAt: apiData.expiry,
+      qrCodeData: apiData.invoice,
+    } : undefined,
     status: apiData.isValid ? "pending" : "expired",
     orderId: apiData.orderId,
     exchangeRate: apiData.exchangeRate,
@@ -114,7 +126,7 @@ const mockApiData: ApiPaymentData = {
   paymentMethod: "BANKTRANSFER",
   expiry: new Date(Date.now() + 2.5 * 60 * 60 * 1000).toISOString(),
   isValid: true,
-  invoice: "",
+  invoice: "lntbs1u1p52f24wpp5m2ncw230r7zhluz5zucqmyz6zl8va9w5rry7ap6w5vrdszntq7hsdz4f4shvctsv9ujq3r9wphhx6t58gsxzv3cv3nrgeph94jrwwp3956r2cnr95uxgerz956k2wtpvvcrwv3h8ymnycqzpuxqyp2xqsp55lh6nh3pdtkuwtw4y0m6rpkskkrnu8d3a7efsr79c0p0cehp78pq9qxpqysgqv9gr2cp2vmuvrndmn9p9lfutp45jcesfdwp3yzakeeu5h42vjq2476nr3nmy9y84f0ztzwfuws0mjeknrlevef3j3t0y7vrecjgcj3sqp6yvxs",
   hash: "689e426b86037b0012075e28",
   totalAmountInSourceCurrency: 95_000_000, // 950,000.00 NGN in kobo
   customerInternalFee: 0,
@@ -127,12 +139,18 @@ const mockApiData: ApiPaymentData = {
 
 export async function fetchPaymentData(
   paymentId: string,
+  paymentMethod?: string,
   merchantLogo?: string
 ): Promise<ApiResponse<PaymentData>> {
   try {
     // Real API implementation - uncomment and modify for production:
     /*
-    const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/payments/${paymentId}`, {
+    const url = new URL(`${process.env.NEXT_PUBLIC_API_URL}/payments/${paymentId}`);
+    if (paymentMethod) {
+      url.searchParams.append('paymentMethod', paymentMethod);
+    }
+    
+    const response = await fetch(url.toString(), {
       method: 'GET',
       headers: {
         'Content-Type': 'application/json',
@@ -160,7 +178,23 @@ export async function fetchPaymentData(
 
     // For demo purposes, simulate API delay and return mock data
     await new Promise((resolve) => setTimeout(resolve, 500));
-    const transformedData = transformApiData(mockApiData, merchantLogo);
+    
+    // Simulate different responses based on payment method
+    const responseData = { ...mockApiData };
+    
+    // Always keep the invoice available so Lightning remains an option
+    responseData.invoice = "lnbc10760n1pnyx5x8x3sqq6s7mw";
+    
+    if (paymentMethod === PaymentMethods.LIGHTNING) {
+      // Set Lightning as the current method
+      responseData.paymentMethod = PaymentMethods.LIGHTNING;
+    } else if (paymentMethod === PaymentMethods.BANKTRANSFER) {
+      // Set Bank Transfer as the current method
+      responseData.paymentMethod = PaymentMethods.BANKTRANSFER;
+    }
+    // If no specific method requested, use default (Lightning if available, otherwise bank transfer)
+    
+    const transformedData = transformApiData(responseData, merchantLogo);
 
     return {
       status: "ok",
@@ -178,7 +212,7 @@ export async function fetchPaymentData(
 }
 
 export async function confirmPayment(
-  paymentId: string
+  _paymentId: string
 ): Promise<ApiResponse<{ status: string }>> {
   try {
     // Real API implementation - uncomment and modify for production:
