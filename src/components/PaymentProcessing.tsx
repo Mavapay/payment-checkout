@@ -9,6 +9,7 @@ import { Card } from "@/components/ui/card";
 import { Check, Hourglass } from "@/public/icons";
 import { PaymentData } from "@/types/payment";
 import { PaymentMethods } from "@/types/primitives";
+import { fetchPaymentStatus } from "@/services/api";
 
 interface PaymentProcessingProps {
   paymentData: PaymentData;
@@ -60,22 +61,65 @@ export function PaymentProcessing({
     return () => clearInterval(timer);
   }, [paymentData.expiresAt]);
 
-  // Simulate processing steps
+  // Check payment status periodically
   useEffect(() => {
-    const timer1 = setTimeout(() => setCurrentStatus("confirming"), 2000);
-    const timer2 = setTimeout(() => {
-      setCurrentStatus("received");
-      // Redirect to success page after a short delay to show the completed state
-      setTimeout(() => {
-        router.push(`/checkout/${paymentData.id}/success`);
-      }, 2000);
-    }, 8000);
+    let statusCheckInterval: NodeJS.Timeout;
+    
+    const checkPaymentStatus = async () => {
+      try {
+        const response = await fetchPaymentStatus(paymentData.orderId);
+        
+        if (response.status === 'ok') {
+          const apiStatus = response.data.status;
+          
+          // Map API status to internal status
+          switch (apiStatus) {
+            case 'PENDING':
+              // Move to confirming after initial sent state
+              if (currentStatus === 'sent') {
+                setTimeout(() => setCurrentStatus("confirming"), 2000);
+              }
+              break;
+            case 'SUCCESS':
+              setCurrentStatus("received");
+              // Redirect to success page after showing completed state
+              setTimeout(() => {
+                router.push(`/checkout/${paymentData.id}/success`);
+              }, 2000);
+              // Clear the interval since payment is complete
+              if (statusCheckInterval) {
+                clearInterval(statusCheckInterval);
+              }
+              break;
+            case 'FAILED':
+              // Handle failed payment - could show error state
+              console.error('Payment failed');
+              // For now, keep in confirming state
+              break;
+          }
+        }
+      } catch (error) {
+        console.error('Error checking payment status:', error);
+        // Continue checking on error
+      }
+    };
+
+    // Initial status check after 2 seconds
+    const initialTimer = setTimeout(() => {
+      setCurrentStatus("confirming");
+      checkPaymentStatus();
+      
+      // Then check every 3 seconds
+      statusCheckInterval = setInterval(checkPaymentStatus, 3000);
+    }, 2000);
 
     return () => {
-      clearTimeout(timer1);
-      clearTimeout(timer2);
+      clearTimeout(initialTimer);
+      if (statusCheckInterval) {
+        clearInterval(statusCheckInterval);
+      }
     };
-  }, [router, paymentData.id]);
+  }, [router, paymentData.id, paymentData.orderId, currentStatus]);
 
   const getSteps = (): ProcessingStep[] => [
     {
@@ -123,7 +167,7 @@ export function PaymentProcessing({
           <p className="text-base text-black-text tracking-wide font-sans font-normal">
             Transfer this exact amount
             <span className="text-base font-normal text-green-600 ml-1.5">
-              {formatAmount(paymentData.amount, paymentData.currency)}
+              {formatAmount(paymentData.amount, paymentData.settlementCurrency)}
             </span>
           </p>
         </div>

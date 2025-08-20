@@ -16,6 +16,7 @@ import {
   PaymentProcessing,
 } from "./";
 import { Spinner } from "./Spinner";
+import { useRouter } from "next/navigation";
 
 interface CheckoutPageProps {
   paymentId: string;
@@ -101,7 +102,7 @@ const PaymentContentSection = ({
           <p className="font-sans font-normal text-sm leading-6 tracking-normal">
             {paymentData.description}
           </p>
-          
+
           {isProcessing && !showAccountDetails ? (
             <PaymentProcessing
               paymentData={paymentData}
@@ -115,11 +116,11 @@ const PaymentContentSection = ({
                 isLoading={isMethodSwitching}
               />
 
-                <PaymentActions
-                  paymentId={paymentData.id}
-                  onPaymentConfirmed={onPaymentConfirmed}
-                  onCancel={onCancel}
-                />
+              <PaymentActions
+                paymentId={paymentData.id}
+                onPaymentConfirmed={onPaymentConfirmed}
+                onCancel={onCancel}
+              />
             </>
           )}
         </div>
@@ -138,6 +139,7 @@ export function CheckoutPage({ paymentId }: CheckoutPageProps) {
   const [isProcessing, setIsProcessing] = useState(false);
   const [showAccountDetails, setShowAccountDetails] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const router = useRouter();
 
   useEffect(() => {
     const loadPaymentData = async () => {
@@ -147,7 +149,6 @@ export function CheckoutPage({ paymentId }: CheckoutPageProps) {
 
         if (response.status === "ok") {
           setPaymentData(response.data);
-          // Use the selectedMethod from API response (which follows Lightning > Bank Transfer priority)
           setSelectedMethod(
             response.data.selectedMethod || response.data.paymentMethods[0]
           );
@@ -172,14 +173,12 @@ export function CheckoutPage({ paymentId }: CheckoutPageProps) {
 
     try {
       setIsMethodSwitching(true);
-      setError(null); // Clear any previous errors
+      setError(null);
 
-      // Fetch payment data for the selected method
       const response = await fetchPaymentData(paymentId, method.type);
 
       if (response.status === "ok") {
         setPaymentData(response.data);
-        // The selected method should match what we requested
         const newSelectedMethod =
           response.data.paymentMethods.find((m) => m.type === method.type) ||
           method;
@@ -205,8 +204,7 @@ export function CheckoutPage({ paymentId }: CheckoutPageProps) {
   };
 
   const handleCancel = () => {
-    // In a real app, you might redirect back to the merchant or show a cancellation page
-    alert("Payment cancelled");
+    router.push(paymentData?.callbackUrl || "/");
   };
 
   if (isLoading) {

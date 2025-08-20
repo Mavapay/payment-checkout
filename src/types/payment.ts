@@ -11,35 +11,45 @@ export interface PaymentMethod {
   icon?: string;
 }
 
-export interface ApiPaymentData {
+// Real API Response structure
+export interface ApiPaymentLinkDetails {
   id: string;
-  exchangeRate: number;
-  usdToTargetCurrencyRate: number;
-  sourceToTargetCurrencyRate?: number;
-  sourceCurrency: TransactionCurrency;
-  targetCurrency: TransactionCurrency;
-  transactionFeesInSourceCurrency: number;
-  transactionFeesInTargetCurrency: number;
-  amountInSourceCurrency: number;
-  amountInTargetCurrency: number;
-  paymentMethod: PaymentMethodType;
-  expiry: string;
-  isValid: boolean;
-  invoice: string;
-  hash: string;
-  totalAmountInSourceCurrency: number;
-  customerInternalFee: number;
-  bankName: string;
-  ngnBankAccountNumber: string;
-  ngnAccountName: string;
-  orderId: string;
-  merchantName: string;
+  name: string;
+  description: string;
+  callbackUrl: string;
+  paymentLinkOrderId: string;
+  paymentMethods: string[];
+  settlementCurrency: TransactionCurrency;
+  account: {
+    name: string;
+    logo: string;
+  };
+  LIGHTNING?: {
+    invoice: string;
+    amount: number;
+    targetAmount: number;
+    expiresAt: string;
+  };
+  BANKTRANSFER?: {
+    ngnAccountName: string;
+    ngnBankName: string;
+    ngnBankAccountNumber: string;
+    amount: number;
+    targetAmount: number;
+    expiresAt: string;
+  };
+}
+
+export interface ApiPaymentData {
+  paymentLinkDetails: ApiPaymentLinkDetails;
 }
 
 export interface BankTransferDetails {
   bankName: string;
   accountNumber: string;
   amount: number;
+  targetAmount: number;
+  currencySymbol: string;
   currency: string;
   expiresAt: string;
   // Keep these for internal use but don't display in UI
@@ -50,6 +60,8 @@ export interface BankTransferDetails {
 export interface LightningInvoiceDetails {
   invoice: string;
   amount: number;
+  targetAmount: number;
+  currencySymbol: string;
   currency: string;
   satsAmount: number;
   expiresAt: string;
@@ -62,10 +74,7 @@ export interface PaymentData {
   merchantLogo: string;
   description: string;
   amount: number;
-  totalAmount: number;
-  fees: number;
-  currency: string;
-  targetCurrency: string;
+  settlementCurrency: TransactionCurrency;
   expiresAt: string;
   paymentMethods: PaymentMethod[];
   selectedMethod?: PaymentMethod;
@@ -73,14 +82,17 @@ export interface PaymentData {
   lightningInvoiceDetails?: LightningInvoiceDetails;
   status: "pending" | "completed" | "expired" | "cancelled";
   orderId: string;
-  exchangeRate: number;
-  hash: string;
+  callbackUrl: string;
 }
 
 export interface ApiResponse<T> {
-  status: "ok" | "error";
+  status: "ok" | "error" | "success";
   data: T;
   message?: string;
+}
+
+export interface PaymentStatusResponse {
+  status: "PENDING" | "SUCCESS" | "FAILED";
 }
 
 export type PaymentMethodType =

@@ -11,8 +11,12 @@ export const getPaymentEndpoints = ({
   paymentMethod?: PaymentMethodType;
 }) => {
   const baseUrl = API_BASE_URL;
+  let getPaymentDetails = `${baseUrl}/paymentlink/details?id=${id}`;
+  if (paymentMethod) {
+    getPaymentDetails += `&paymentMethod=${paymentMethod}`;
+  }
   return {
-    getPaymentDetails: `${baseUrl}/paymentlink/details?id=${id}&paymentMethod=${paymentMethod}`,
+    getPaymentDetails,
     getPaymentStatus: `${baseUrl}/paymentlink/status?orderId=${orderId}`,
   };
 };

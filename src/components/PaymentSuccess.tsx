@@ -2,6 +2,7 @@
 
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
+import { formatAmount } from "@/lib/utils";
 import { PaymentData } from "@/types/payment";
 import { Success } from "@/public/icons/success";
 
@@ -9,10 +10,6 @@ interface PaymentSuccessProps {
   paymentData: PaymentData;
   onCloseCheckout: () => void;
 }
-
-const formatAmount = (amount: number, currency: string) => {
-  return `${currency} ${amount.toLocaleString()}`;
-};
 
 export function PaymentSuccess({
   paymentData,
@@ -33,7 +30,13 @@ export function PaymentSuccess({
             <p className="text-base font-normal font-inter text-[#666666]">
               Your payment of{" "}
               <span>
-                {formatAmount(paymentData.amount, paymentData.currency)}
+                {formatAmount(
+                  paymentData.amount,
+                  paymentData.settlementCurrency,
+                  paymentData.bankTransferDetails?.currencySymbol ||
+                    paymentData.lightningInvoiceDetails?.currencySymbol ||
+                    ""
+                )}
               </span>{" "}
               to {paymentData.merchantName} was successful!
             </p>

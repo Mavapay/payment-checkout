@@ -1,7 +1,9 @@
-'use client';
+"use client";
 
-import { useEffect, useState } from 'react';
-import Image from 'next/image';
+import Image from "next/image";
+import { useEffect, useState } from "react";
+
+import { calculateTimeLeft } from "@/lib/utils";
 
 interface PaymentHeaderProps {
   merchantName: string;
@@ -9,28 +11,19 @@ interface PaymentHeaderProps {
   expiresAt: string;
 }
 
-export function PaymentHeader({ merchantName, merchantLogo, expiresAt }: PaymentHeaderProps) {
-  const [timeLeft, setTimeLeft] = useState('');
+export function PaymentHeader({
+  merchantName,
+  merchantLogo,
+  expiresAt,
+}: PaymentHeaderProps) {
+  const [timeLeft, setTimeLeft] = useState("");
 
   useEffect(() => {
-    const calculateTimeLeft = () => {
-      const now = new Date().getTime();
-      const expiry = new Date(expiresAt).getTime();
-      const difference = expiry - now;
-
-      if (difference > 0) {
-        const hours = Math.floor((difference % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
-        const minutes = Math.floor((difference % (1000 * 60 * 60)) / (1000 * 60));
-        const seconds = Math.floor((difference % (1000 * 60)) / 1000);
-
-        setTimeLeft(`${hours}:${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`);
-      } else {
-        setTimeLeft('0:00:00');
-      }
-    };
-
-    calculateTimeLeft();
-    const timer = setInterval(calculateTimeLeft, 1000);
+    setTimeLeft(calculateTimeLeft(expiresAt));
+    const timer = setInterval(
+      () => setTimeLeft(calculateTimeLeft(expiresAt)),
+      1000
+    );
 
     return () => clearInterval(timer);
   }, [expiresAt]);
@@ -55,7 +48,7 @@ export function PaymentHeader({ merchantName, merchantLogo, expiresAt }: Payment
           </div>
         )}
       </div>
-      
+
       <div className="flex items-center gap-4 text-sm text-gray-600">
         <span>PAYMENT LINK FROM {merchantName.toUpperCase()}</span>
         <span>•</span>

@@ -149,10 +149,61 @@ The application uses Tailwind CSS with shadcn/ui components. Customize:
 
 ## Environment Variables
 
-For production deployment, create a `.env.local` file:
-```env
-NEXT_PUBLIC_API_URL=https://your-api-domain.com/api
-NEXT_PUBLIC_MERCHANT_NAME=ZARA
+Create a `.env.local` file in the root directory:
+
+```bash
+# API Configuration
+NEXT_PUBLIC_MAVAPAY_API_BASE_URL=http://localhost:8080/api/v1
+
+# For production, use your actual API URL:
+# NEXT_PUBLIC_MAVAPAY_API_BASE_URL=https://your-api-domain.com/api/v1
+```
+
+## API Integration
+
+The application integrates with real API endpoints:
+
+### Payment Details Endpoint
+```
+GET /api/v1/paymentlink/details?id={paymentId}&paymentMethod={method}
+```
+
+**Parameters:**
+- `id` (required): Payment link ID
+- `paymentMethod` (optional): `LIGHTNING` or `BANKTRANSFER`
+
+**Response Structure:**
+```json
+{
+  "status": "ok",
+  "message": "payment link details",
+  "data": {
+    "paymentLinkDetails": {
+      "id": "string",
+      "name": "string",
+      "description": "string",
+      "callbackUrl": "string",
+      "paymentLinkOrderId": "string",
+      "paymentMethods": ["BANKTRANSFER", "LIGHTNING"],
+      "account": {
+        "name": "string",
+        "logo": "string"
+      },
+      "LIGHTNING": {
+        "invoice": "string",
+        "amount": number,
+        "expiresAt": "ISO date string"
+      },
+      "BANKTRANSFER": {
+        "ngnAccountName": "string",
+        "ngnBankName": "string", 
+        "ngnBankAccountNumber": "string",
+        "amount": number,
+        "expiresAt": "ISO date string"
+      }
+    }
+  }
+}
 ```
 
 ### Logo Support

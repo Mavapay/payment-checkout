@@ -9,7 +9,7 @@ import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
-import { copyToClipboard } from "@/lib/utils";
+import { calculateTimeLeft, copyToClipboard, formatAmount } from "@/lib/utils";
 import {
   BankTransferDetails,
   LightningInvoiceDetails,
@@ -17,6 +17,7 @@ import {
   PaymentType,
 } from "@/types/payment";
 import { PaymentTypes } from "@/types/primitives";
+
 import { Spinner } from "./Spinner";
 
 interface PaymentDetailsProps {
@@ -24,10 +25,6 @@ interface PaymentDetailsProps {
   paymentType: PaymentType;
   isLoading: boolean;
 }
-
-const formatAmount = (amount: number, currency: string) => {
-  return `${currency} ${amount.toLocaleString()}`;
-};
 
 export function PaymentDetails({
   details,
@@ -60,10 +57,14 @@ export function PaymentDetails({
           },
           {
             label: "AMOUNT",
-            value: formatAmount(bankDetails.amount, bankDetails.currency),
+            value: formatAmount(
+              bankDetails.amount,
+              bankDetails.currency,
+              bankDetails.currencySymbol
+            ),
             copyable: true,
             copyKey: "amount",
-            copyValue: bankDetails.amount.toString(),
+            copyValue: bankDetails?.amount?.toString(),
           },
         ]
       : [];
@@ -104,24 +105,11 @@ export function PaymentDetails({
 
   // Calculate time left until expiry
   useEffect(() => {
-    const calculateTimeLeft = () => {
-      const now = new Date().getTime();
-      const expiry = new Date(details.expiresAt).getTime();
-      const difference = expiry - now;
-
-      if (difference > 0) {
-        const minutes = Math.floor(
-          (difference % (1000 * 60 * 60)) / (1000 * 60)
-        );
-        const seconds = Math.floor((difference % (1000 * 60)) / 1000);
-        setTimeLeft(`${minutes}:${seconds.toString().padStart(2, "0")}`);
-      } else {
-        setTimeLeft("0:00");
-      }
-    };
-
-    calculateTimeLeft();
-    const timer = setInterval(calculateTimeLeft, 1000);
+    setTimeLeft(calculateTimeLeft(details.expiresAt));
+    const timer = setInterval(
+      () => setTimeLeft(calculateTimeLeft(details.expiresAt)),
+      1000
+    );
 
     return () => clearInterval(timer);
   }, [details.expiresAt]);
@@ -161,8 +149,13 @@ export function PaymentDetails({
         <>
           Pay this invoice
           <span className="text-base font-semibold text-green-600 ml-1.5">
-            {formatAmount(lightningDetails.amount, lightningDetails.currency)} (
-            {lightningDetails.satsAmount.toLocaleString()} SATS)
+            {lightningDetails.satsAmount.toLocaleString()} SATS (
+            {formatAmount(
+              lightningDetails.amount,
+              lightningDetails.currency,
+              lightningDetails.currencySymbol
+            )}
+            )
           </span>
         </>
       );
@@ -171,7 +164,13 @@ export function PaymentDetails({
       <>
         Transfer this exact amount
         <span className="text-base font-semibold text-green-600 ml-1.5">
-          {formatAmount(details.amount, details.currency)}
+          {formatAmount(
+            details.amount,
+            details.bankTransferDetails?.currency || "",
+            details.bankTransferDetails?.currencySymbol || ""
+          )}{" "}
+          ({(details.bankTransferDetails?.targetAmount || 0).toLocaleString()}{" "}
+          SATS)
         </span>
       </>
     );
@@ -190,43 +189,53 @@ export function PaymentDetails({
     );
   };
 
-  const LightningContent = () => (
-    <div className="flex flex-col items-center space-y-6 px-6 py-0">
-      {qrCodeDataUrl && (
-        <div className="bg-white p-4 rounded-lg">
-          <Image
-            src={qrCodeDataUrl}
-            alt="Lightning Invoice QR Code"
-            width={200}
-            height={200}
-            className="rounded"
-          />
+  const LightningContent = () => {
+    if (!lightningDetails) {
+      return (
+        <div className="flex flex-col items-center space-y-6 px-6 py-0">
+          <p className="text-gray-500">Lightning invoice not available</p>
         </div>
-      )}
+      );
+    }
 
-      <div className="w-full">
-        <div className="flex items-center justify-between px-4 rounded-lg">
-          <span className="font-mono text-sm text-black-text break-all mr-2 bg-grey-accent-bg p-2 rounded-lg">
-            {lightningDetails!.invoice.slice(0, 20)}...
-            {lightningDetails!.invoice.slice(-10)}
-          </span>
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() =>
-              handleCopyToClipboard({
-                value: lightningDetails!.invoice,
-                copyKey: "Lightning invoice",
-              })
-            }
-            className="text-gray-500 hover:text-gray-700 cursor-pointer flex-shrink-0"
-          >
-            <Copy className="w-4 h-4" />
-          </Button>
+    return (
+      <div className="flex flex-col items-center space-y-6 px-6 py-0">
+        {qrCodeDataUrl && (
+          <div className="bg-white p-4 rounded-lg">
+            <Image
+              src={qrCodeDataUrl}
+              alt="Lightning Invoice QR Code"
+              width={200}
+              height={200}
+              className="rounded"
+            />
+          </div>
+        )}
+
+        <div className="w-full">
+          <div className="flex items-center justify-between px-4 rounded-lg">
+            <span className="font-mono text-sm text-black-text break-all mr-2 bg-grey-accent-bg p-2 rounded-lg">
+              {lightningDetails.invoice.slice(0, 20)}...
+              {lightningDetails.invoice.slice(-10)}
+            </span>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() =>
+                handleCopyToClipboard({
+                  value: lightningDetails.invoice,
+                  copyKey: "Lightning invoice",
+                })
+              }
+              className="text-gray-500 hover:text-gray-700 cursor-pointer flex-shrink-0"
+            >
+              <Copy className="w-4 h-4" />
+            </Button>
+          </div>
         </div>
       </div>
-    </div>
-  );
+    );
+  };
 
   const BankTransferContent = () => (
     <div className="space-y-4 px-6">
