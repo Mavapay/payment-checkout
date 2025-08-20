@@ -23,6 +23,9 @@ const inter = Inter({
 export const metadata: Metadata = {
   title: "Mavapay Checkout",
   description: "Receive payments from your customers using Mavapay",
+  icons: {
+    icon: "/icons/favicon.svg",
+  },
 };
 
 export default function RootLayout({
