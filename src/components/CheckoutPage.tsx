@@ -13,6 +13,7 @@ import {
   PaymentFooter,
   PaymentHeader,
   PaymentMethods as PaymentMethodsComponent,
+  PaymentProcessing,
 } from "./";
 import { Spinner } from "./Spinner";
 
@@ -58,6 +59,9 @@ interface PaymentContentSectionProps {
   onPaymentConfirmed: () => void;
   onCancel: () => void;
   isMethodSwitching: boolean;
+  isProcessing: boolean;
+  showAccountDetails: boolean;
+  onShowAccountNumber: () => void;
 }
 
 const PaymentContentSection = ({
@@ -67,6 +71,9 @@ const PaymentContentSection = ({
   onPaymentConfirmed,
   onCancel,
   isMethodSwitching,
+  isProcessing,
+  showAccountDetails,
+  onShowAccountNumber,
 }: PaymentContentSectionProps) => {
   if (!selectedMethod) {
     return <Spinner message="Loading payment details..." />;
@@ -94,18 +101,27 @@ const PaymentContentSection = ({
           <p className="font-sans font-normal text-sm leading-6 tracking-normal">
             {paymentData.description}
           </p>
-          <PaymentDetails
-            details={paymentData}
-            paymentType={paymentType()}
-            isLoading={isMethodSwitching}
-          />
-          <div className="">
-            <PaymentActions
-              paymentId={paymentData.id}
-              onPaymentConfirmed={onPaymentConfirmed}
-              onCancel={onCancel}
+          
+          {isProcessing && !showAccountDetails ? (
+            <PaymentProcessing
+              paymentData={paymentData}
+              onShowAccountNumber={onShowAccountNumber}
             />
-          </div>
+          ) : (
+            <>
+              <PaymentDetails
+                details={paymentData}
+                paymentType={paymentType()}
+                isLoading={isMethodSwitching}
+              />
+
+                <PaymentActions
+                  paymentId={paymentData.id}
+                  onPaymentConfirmed={onPaymentConfirmed}
+                  onCancel={onCancel}
+                />
+            </>
+          )}
         </div>
       </div>
     </div>
@@ -119,6 +135,8 @@ export function CheckoutPage({ paymentId }: CheckoutPageProps) {
   );
   const [isLoading, setIsLoading] = useState(true);
   const [isMethodSwitching, setIsMethodSwitching] = useState(false);
+  const [isProcessing, setIsProcessing] = useState(false);
+  const [showAccountDetails, setShowAccountDetails] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
@@ -178,8 +196,12 @@ export function CheckoutPage({ paymentId }: CheckoutPageProps) {
   };
 
   const handlePaymentConfirmed = () => {
-    // In a real app, you might redirect to a success page or show a success message
-    alert("Payment confirmed! Thank you.");
+    setIsProcessing(true);
+    setShowAccountDetails(false);
+  };
+
+  const handleShowAccountNumber = () => {
+    setShowAccountDetails(true);
   };
 
   const handleCancel = () => {
@@ -206,6 +228,9 @@ export function CheckoutPage({ paymentId }: CheckoutPageProps) {
         onPaymentConfirmed={handlePaymentConfirmed}
         onCancel={handleCancel}
         isMethodSwitching={isMethodSwitching}
+        isProcessing={isProcessing}
+        showAccountDetails={showAccountDetails}
+        onShowAccountNumber={handleShowAccountNumber}
       />
 
       <PaymentFooter />
