@@ -1,0 +1,18 @@
+import { API_BASE_URL } from "./process";
+import { PaymentMethodType } from "@/types/payment";
+
+export const getPaymentEndpoints = ({
+  id,
+  orderId,
+  paymentMethod,
+}: {
+  id?: string;
+  orderId?: string;
+  paymentMethod?: PaymentMethodType;
+}) => {
+  const baseUrl = API_BASE_URL;
+  return {
+    getPaymentDetails: `${baseUrl}/paymentlink/details?id=${id}&paymentMethod=${paymentMethod}`,
+    getPaymentStatus: `${baseUrl}/paymentlink/status?orderId=${orderId}`,
+  };
+};
