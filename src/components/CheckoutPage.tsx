@@ -117,7 +117,7 @@ const PaymentContentSection = ({
               />
 
               <PaymentActions
-                paymentId={paymentData.id}
+                paymentId={paymentData.paymentLinkId}
                 onPaymentConfirmed={onPaymentConfirmed}
                 onCancel={onCancel}
               />

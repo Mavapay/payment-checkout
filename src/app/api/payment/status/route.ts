@@ -6,7 +6,7 @@ import { ApiResponse, PaymentStatusResponse } from "@/types/payment";
 export async function GET(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url);
-    const orderId = searchParams.get('orderId');
+    const orderId = searchParams.get("orderId");
 
     if (!orderId) {
       return NextResponse.json(
@@ -18,38 +18,37 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    // Get the endpoint URL from config
     const endpoints = getPaymentEndpoints({
       orderId,
     });
-    
+
     const response = await axios.get<ApiResponse<PaymentStatusResponse>>(
       endpoints.getPaymentStatus,
       {
         headers: {
-          'Content-Type': 'application/json',
-          // Add authentication headers if needed
-          // 'Authorization': `Bearer ${token}`,
+          "Content-Type": "application/json",
         },
       }
     );
-    
+
     const apiResponse = response.data;
-    
-    if (apiResponse.status === 'success' || apiResponse.status === 'ok') {
+
+    if (apiResponse.status === "success" || apiResponse.status === "ok") {
       return NextResponse.json({
-        status: 'ok',
+        status: "ok",
         data: apiResponse.data,
       });
     } else {
-      throw new Error(apiResponse.message || 'API returned error status');
+      throw new Error(apiResponse.message || "API returned error status");
     }
   } catch (error) {
     console.error("Error fetching payment status:", error);
-    
-    // Handle axios-specific errors
+
     if (axios.isAxiosError(error)) {
-      const message = error.response?.data?.message || error.message || "Failed to fetch payment status";
+      const message =
+        error.response?.data?.message ||
+        error.message ||
+        "Failed to fetch payment status";
       return NextResponse.json(
         {
           status: "error",
@@ -59,11 +58,14 @@ export async function GET(request: NextRequest) {
         { status: error.response?.status || 500 }
       );
     }
-    
+
     return NextResponse.json(
       {
         status: "error",
-        message: error instanceof Error ? error.message : "Failed to fetch payment status",
+        message:
+          error instanceof Error
+            ? error.message
+            : "Failed to fetch payment status",
         data: { status: "PENDING" }, // Default to pending on error
       },
       { status: 500 }

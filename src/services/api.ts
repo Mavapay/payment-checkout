@@ -7,91 +7,91 @@ import {
 
 export async function fetchPaymentData(
   paymentId: string,
-  paymentMethod?: string,
-  merchantLogo?: string
+  paymentMethod?: string
 ): Promise<ApiResponse<PaymentData>> {
   try {
-    // Build query parameters
     const params = new URLSearchParams({
       id: paymentId,
     });
-    
+
     if (paymentMethod) {
-      params.append('paymentMethod', paymentMethod);
+      params.append("paymentMethod", paymentMethod);
     }
-    
-    if (merchantLogo) {
-      params.append('merchantLogo', merchantLogo);
-    }
-    
+
     const response = await axios.get<ApiResponse<PaymentData>>(
       `/api/payment/details?${params.toString()}`,
       {
         headers: {
-          'Content-Type': 'application/json',
+          "Content-Type": "application/json",
         },
       }
     );
-    
+
     return response.data;
   } catch (error) {
     console.error("Error fetching payment data:", error);
-    
-    // Handle axios-specific errors
+
     if (axios.isAxiosError(error)) {
-      const message = error.response?.data?.message || error.message || "Failed to fetch payment data";
+      const message =
+        error.response?.data?.message ||
+        error.message ||
+        "Failed to fetch payment data";
       return {
         status: "error",
         data: {} as PaymentData,
         message,
       };
     }
-    
+
     return {
       status: "error",
       data: {} as PaymentData,
-      message: error instanceof Error ? error.message : "Failed to fetch payment data",
+      message:
+        error instanceof Error ? error.message : "Failed to fetch payment data",
     };
   }
 }
 
-export async function confirmPayment(
-  paymentId: string
-): Promise<ApiResponse<{ status: string }>> {
-  try {
-    const response = await axios.post<ApiResponse<{ status: string }>>(
-      '/api/payment/confirm',
-      {
-        paymentId,
-      },
-      {
-        headers: {
-          'Content-Type': 'application/json',
-        },
-      }
-    );
-    
-    return response.data;
-  } catch (error) {
-    console.error("Error confirming payment:", error);
-    
-    // Handle axios-specific errors
-    if (axios.isAxiosError(error)) {
-      const message = error.response?.data?.message || error.message || "Failed to confirm payment";
-      return {
-        status: "error",
-        data: { status: "error" },
-        message,
-      };
-    }
-    
-    return {
-      status: "error",
-      data: { status: "error" },
-      message: error instanceof Error ? error.message : "Failed to confirm payment",
-    };
-  }
-}
+// export async function confirmPayment(
+//   paymentId: string
+// ): Promise<ApiResponse<{ status: string }>> {
+//   try {
+//     const response = await axios.post<ApiResponse<{ status: string }>>(
+//       "/api/payment/confirm",
+//       {
+//         paymentId,
+//       },
+//       {
+//         headers: {
+//           "Content-Type": "application/json",
+//         },
+//       }
+//     );
+
+//     return response.data;
+//   } catch (error) {
+//     console.error("Error confirming payment:", error);
+
+//     if (axios.isAxiosError(error)) {
+//       const message =
+//         error.response?.data?.message ||
+//         error.message ||
+//         "Failed to confirm payment";
+//       return {
+//         status: "error",
+//         data: { status: "error" },
+//         message,
+//       };
+//     }
+
+//     return {
+//       status: "error",
+//       data: { status: "error" },
+//       message:
+//         error instanceof Error ? error.message : "Failed to confirm payment",
+//     };
+//   }
+// }
 
 export async function fetchPaymentStatus(
   orderId: string
@@ -100,34 +100,40 @@ export async function fetchPaymentStatus(
     const params = new URLSearchParams({
       orderId,
     });
-    
+
     const response = await axios.get<ApiResponse<PaymentStatusResponse>>(
       `/api/payment/status?${params.toString()}`,
       {
         headers: {
-          'Content-Type': 'application/json',
+          "Content-Type": "application/json",
         },
       }
     );
-    
+
     return response.data;
   } catch (error) {
     console.error("Error fetching payment status:", error);
-    
+
     // Handle axios-specific errors
     if (axios.isAxiosError(error)) {
-      const message = error.response?.data?.message || error.message || "Failed to fetch payment status";
+      const message =
+        error.response?.data?.message ||
+        error.message ||
+        "Failed to fetch payment status";
       return {
         status: "error",
         data: { status: "PENDING" }, // Default to pending on error
         message,
       };
     }
-    
+
     return {
       status: "error",
       data: { status: "PENDING" }, // Default to pending on error
-      message: error instanceof Error ? error.message : "Failed to fetch payment status",
+      message:
+        error instanceof Error
+          ? error.message
+          : "Failed to fetch payment status",
     };
   }
 }

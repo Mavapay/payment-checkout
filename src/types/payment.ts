@@ -82,6 +82,7 @@ export interface PaymentData {
   lightningInvoiceDetails?: LightningInvoiceDetails;
   status: "pending" | "completed" | "expired" | "cancelled";
   orderId: string;
+  paymentLinkId: string;
   callbackUrl: string;
 }
 

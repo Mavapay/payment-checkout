@@ -133,6 +133,7 @@ const transformApiData = (
     selectedMethod,
     bankTransferDetails,
     lightningInvoiceDetails,
+    paymentLinkId: details.paymentLinkOrderId,
     status: "pending", // Always pending for new payments
     orderId: details.paymentLinkOrderId,
     callbackUrl: details.callbackUrl,

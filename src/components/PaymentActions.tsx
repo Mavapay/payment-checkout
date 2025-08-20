@@ -3,7 +3,7 @@
 import { useState } from "react";
 
 import { Button } from "@/components/ui/button";
-import { confirmPayment } from "@/services/api";
+import { fetchPaymentStatus } from "@/services/api";
 
 interface PaymentActionsProps {
   paymentId: string;
@@ -21,7 +21,7 @@ export function PaymentActions({
   const handleConfirmPayment = async () => {
     setIsConfirming(true);
     try {
-      const result = await confirmPayment(paymentId);
+      const result = await fetchPaymentStatus(paymentId);
       if (result.status === "ok") {
         onPaymentConfirmed();
       } else {
