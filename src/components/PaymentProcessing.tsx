@@ -1,6 +1,7 @@
 "use client";
 
 import { AlertCircle } from "lucide-react";
+import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 
 import { Button } from "@/components/ui/button";
@@ -32,6 +33,7 @@ export function PaymentProcessing({
   paymentData,
   onShowAccountNumber,
 }: PaymentProcessingProps) {
+  const router = useRouter();
   const [currentStatus, setCurrentStatus] = useState<ProcessingStatus>("sent");
   const [timeLeft, setTimeLeft] = useState("");
 
@@ -61,13 +63,19 @@ export function PaymentProcessing({
   // Simulate processing steps
   useEffect(() => {
     const timer1 = setTimeout(() => setCurrentStatus("confirming"), 2000);
-    const timer2 = setTimeout(() => setCurrentStatus("received"), 8000);
+    const timer2 = setTimeout(() => {
+      setCurrentStatus("received");
+      // Redirect to success page after a short delay to show the completed state
+      setTimeout(() => {
+        router.push(`/checkout/${paymentData.id}/success`);
+      }, 2000);
+    }, 8000);
 
     return () => {
       clearTimeout(timer1);
       clearTimeout(timer2);
     };
-  }, []);
+  }, [router, paymentData.id]);
 
   const getSteps = (): ProcessingStep[] => [
     {
