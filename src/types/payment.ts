@@ -82,7 +82,7 @@ export interface PaymentData {
   selectedMethod?: PaymentMethod;
   bankTransferDetails?: BankTransferDetails;
   lightningInvoiceDetails?: LightningInvoiceDetails;
-  status: ApiPaymentStatus;
+  status: ApiPaymentStatusType;
   orderId: string;
   paymentLinkId: string;
   callbackUrl: string;
@@ -94,10 +94,6 @@ export interface ApiResponse<T> {
   message?: string;
 }
 
-export interface PaymentStatusResponse {
-  status: "PENDING" | "SUCCESS" | "FAILED";
-}
-
 export type PaymentMethodType =
   (typeof PaymentMethods)[keyof typeof PaymentMethods];
 
@@ -106,7 +102,7 @@ export type TransactionCurrency =
 
 export type PaymentType = (typeof PaymentTypes)[keyof typeof PaymentTypes];
 
-export type ApiPaymentStatus =
+export type ApiPaymentStatusType =
   (typeof ApiPaymentStatus)[keyof typeof ApiPaymentStatus];
 
 export type ProcessingStatusType =

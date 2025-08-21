@@ -223,7 +223,7 @@ export function PaymentDetails({
       return (
         <>
           Pay this invoice
-          <span className="text-base font-semibold text-green-600 ml-1.5">
+          <span className="font-semibold text-green-600 ml-1.5">
             {lightningDetails.satsAmount.toLocaleString()} SATS (
             {formatAmount(
               lightningDetails.amount,
@@ -259,7 +259,7 @@ export function PaymentDetails({
       : "This account is for this transaction only and expires in";
 
     return (
-      <div className="text-grey-text-primary">
+      <div className="text-grey-text-primary text-xs md:text-sm">
         {baseText}{" "}
         <span className="font-semibold text-green-600">
           {isLoading ? "..." : timeLeft}
@@ -279,12 +279,12 @@ export function PaymentDetails({
 
     return (
       <div
-        className={`flex flex-col items-center space-y-6 px-6 py-0 ${
+        className={`flex flex-col items-center space-y-0 md:space-y-6 px-6 py-0 ${
           isPaymentExpired ? "blur-sm" : ""
         }`}
       >
         {qrCodeDataUrl && (
-          <div className="bg-white p-4 rounded-lg">
+          <div className="bg-white pb-4 md:p-4 rounded-lg">
             <Image
               src={qrCodeDataUrl}
               alt="Lightning Invoice QR Code"
@@ -297,9 +297,8 @@ export function PaymentDetails({
 
         <div className="w-full">
           <div className="flex items-center justify-between px-4 rounded-lg">
-            <span className="font-mono text-sm text-black-text break-all mr-2 bg-grey-accent-bg p-2 rounded-lg">
-              {lightningDetails.invoice.slice(0, 20)}...
-              {lightningDetails.invoice.slice(-10)}
+            <span className="font-mono text-xs md:text-sm text-black-text break-all mr-2 bg-white border border-grey-dark-bg p-2 rounded-lg">
+              {lightningDetails.invoice.slice(0, 25)}...
             </span>
             <Button
               variant="outline"
@@ -358,7 +357,7 @@ export function PaymentDetails({
         <div className="bg-white rounded-full p-2">
           <AlertCircle className="w-5 h-5 text-orange-accent-text mt-0.5 flex-shrink-0" />
         </div>
-        <div className="text-xs text-orange-accent-text font-inter font-normal max-w-xs">
+        <div className="text-xs text-orange-accent-text font-inter font-normal max-w-xs leading-5">
           Please do not close this tab until your payment has been confirmed!!!
         </div>
       </div>
@@ -366,11 +365,11 @@ export function PaymentDetails({
   );
 
   return (
-    <div className="space-y-6">
-      <Card className="shadow-none rounded-3xl border border-grey-dark-bg p-0 overflow-hidden">
+    <div className="space-y-4 md:space-y-6">
+      <Card className="shadow-none rounded-3xl border border-grey-dark-bg p-0 gap-4 md:gap-4 overflow-hidden">
         <div className="text-center bg-grey-accent-bg h-full px-6 py-5">
           <p
-            className={`text-base tracking-wide font-sans font-normal ${
+            className={`text-xs md:text-base tracking-wide font-sans font-normal ${
               isPaymentExpired ? "text-red-primary-text" : "text-black-text"
             }`}
           >
@@ -391,7 +390,7 @@ export function PaymentDetails({
         <div className="px-6">
           <Separator className="bg-grey-dark-bg" />
         </div>
-        <div className="text-sm flex justify-center items-center px-6 mb-7">
+        <div className="text-sm flex justify-center items-center px-6 mb-4 md:mb-7">
           {getExpiryText()}
         </div>
       </Card>

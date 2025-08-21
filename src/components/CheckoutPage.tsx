@@ -17,6 +17,7 @@ import {
 } from "./";
 import { Spinner } from "./Spinner";
 import { useRouter } from "next/navigation";
+import Image from "next/image";
 
 interface CheckoutPageProps {
   paymentId: string;
@@ -39,18 +40,57 @@ const ErrorDisplay = ({ error }: ErrorDisplayProps) => (
 
 interface PaymentHeaderSectionProps {
   paymentData: PaymentData;
+  selectedMethod: PaymentMethod | null;
+  onMethodSelect: (method: PaymentMethod) => void;
+  isMethodSwitching: boolean;
 }
 
-const PaymentHeaderSection = ({ paymentData }: PaymentHeaderSectionProps) => (
-  <div className="bg-white border-b border-grey-dark-bg">
-    <div className="max-w-7xl mx-auto">
-      <PaymentHeader
-        merchantName={paymentData.merchantName}
-        merchantLogo={paymentData.merchantLogo}
-      />
+const PaymentHeaderSection = ({
+  paymentData,
+  selectedMethod,
+  onMethodSelect,
+  isMethodSwitching,
+}: PaymentHeaderSectionProps) => {
+  return (
+    <div className="md:border-b md:bg-white border-grey-dark-bg">
+      <div className="max-w-7xl mx-auto hidden md:block">
+        <PaymentHeader
+          merchantName={paymentData.merchantName}
+          merchantLogo={paymentData.merchantLogo}
+        />
+      </div>
+      <div className="md:hidden max-w-7xl mx-auto">
+        <PaymentMethodsComponent
+          paymentMethods={paymentData.paymentMethods}
+          selectedMethod={selectedMethod || undefined}
+          onMethodSelect={onMethodSelect}
+          isLoading={isMethodSwitching}
+        />
+      </div>
+      <div className="md:hidden flex items-center justify-center mx-auto px-10">
+        <div className="flex justify-between gap-x-4 w-fit pt-2 space-y-3">
+          <div className="flex items-center justify-center flex-shrink-0">
+            <Image
+              src={paymentData.merchantLogo || "/icons/favicon.svg"}
+              alt={`${paymentData.merchantName} logo`}
+              width={100}
+              height={32}
+              className="h-8 w-auto object-contain"
+            />
+          </div>
+          <div className="flex flex-col leading-5 text-[10px] text-left text-gray-600 font-sans font-normal">
+            <p className="p-0 m-0">
+              PAYMENT LINK FROM {paymentData.merchantName.toUpperCase()}
+            </p>
+            <p className="p-0 m-0">
+              THIS LINK EXPIRES AFTER PAYMENT IS RECEIVED
+            </p>
+          </div>
+        </div>
+      </div>
     </div>
-  </div>
-);
+  );
+};
 
 interface PaymentContentSectionProps {
   paymentData: PaymentData;
@@ -92,9 +132,9 @@ const PaymentContentSection = ({
   };
 
   return (
-    <div className="max-w-4xl mx-auto p-10">
-      <div className="flex justify-between border border-grey-dark-bg bg-white rounded-xl">
-        <div className="space-y-6">
+    <div className="max-w-4xl mx-auto p-2 md:p-10 mt-0">
+      <div className="flex flex-col md:flex-row px-2 md:px-0 justify-between border border-grey-dark-bg bg-white rounded-xl">
+        <div className="space-y-6 hidden md:block">
           <PaymentMethodsComponent
             paymentMethods={paymentData.paymentMethods}
             selectedMethod={selectedMethod || undefined}
@@ -103,8 +143,8 @@ const PaymentContentSection = ({
           />
         </div>
 
-        <div className="space-y-6 py-8 flex flex-col justify-center items-center w-full">
-          <p className="font-sans font-normal text-sm leading-6 tracking-normal">
+        <div className="md:space-y-6 md:py-8 flex flex-col justify-center items-center w-full">
+          <p className="font-sans font-normal text-sm leading-6 tracking-normal py-2 md:px-0">
             {paymentData.description}
           </p>
 
@@ -252,7 +292,12 @@ export function CheckoutPage({ paymentId }: CheckoutPageProps) {
 
   return (
     <div className="min-h-screen bg-green-accent-bg">
-      <PaymentHeaderSection paymentData={paymentData} />
+      <PaymentHeaderSection
+        paymentData={paymentData}
+        selectedMethod={selectedMethod}
+        onMethodSelect={handleMethodSelect}
+        isMethodSwitching={isMethodSwitching}
+      />
 
       <PaymentContentSection
         paymentData={paymentData}

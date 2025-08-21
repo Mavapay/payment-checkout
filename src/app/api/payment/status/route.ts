@@ -1,7 +1,8 @@
 import axios from "axios";
 import { NextRequest, NextResponse } from "next/server";
 import { getPaymentEndpoints } from "@/config/endpoints";
-import { ApiResponse, PaymentStatusResponse } from "@/types/payment";
+import { ApiPaymentStatusType, ApiResponse } from "@/types/payment";
+import { ApiPaymentStatus } from "@/types/primitives";
 
 export async function GET(request: NextRequest) {
   try {
@@ -22,7 +23,7 @@ export async function GET(request: NextRequest) {
       orderId,
     });
 
-    const response = await axios.get<ApiResponse<PaymentStatusResponse>>(
+    const response = await axios.get<ApiResponse<{ status: ApiPaymentStatusType }>>(
       endpoints.getPaymentStatus,
       {
         headers: {
@@ -36,7 +37,7 @@ export async function GET(request: NextRequest) {
     if (apiResponse.status === "success" || apiResponse.status === "ok") {
       return NextResponse.json({
         status: "ok",
-        data: apiResponse.data,
+        data: apiResponse.data as { status: ApiPaymentStatusType },
       });
     } else {
       throw new Error(apiResponse.message || "API returned error status");
@@ -53,7 +54,7 @@ export async function GET(request: NextRequest) {
         {
           status: "error",
           message,
-          data: { status: "PENDING" }, // Default to pending on error
+          data: { status: ApiPaymentStatus.PENDING }, // Default to pending on error
         },
         { status: error.response?.status || 500 }
       );
@@ -66,7 +67,7 @@ export async function GET(request: NextRequest) {
           error instanceof Error
             ? error.message
             : "Failed to fetch payment status",
-        data: { status: "PENDING" }, // Default to pending on error
+        data: { status: ApiPaymentStatus.PENDING }, // Default to pending on error
       },
       { status: 500 }
     );

@@ -57,11 +57,11 @@ export function PaymentProcessing({
             case ApiPaymentStatus.PENDING:
               await storage.setItem(storageKeys.paymentData, paymentData);
               if (currentStatus === ProcessingStatus.SENT) {
-                setTimeout(() => setCurrentStatus("confirming"), 2000);
+                setTimeout(() => setCurrentStatus(ProcessingStatus.CONFIRMING), 2000);
               }
               break;
-            case ApiPaymentStatus.SUCCESS:
-              setCurrentStatus("received");
+            case ApiPaymentStatus.SETTLED:
+              setCurrentStatus(ProcessingStatus.RECEIVED);
               await storage.setItem(storageKeys.paymentData, paymentData);
               setTimeout(() => {
                 router.push(`/checkout/${paymentData.id}/success`);
@@ -85,7 +85,7 @@ export function PaymentProcessing({
 
     // Initial status check after 2 seconds
     const initialTimer = setTimeout(() => {
-      setCurrentStatus("confirming");
+      setCurrentStatus(ProcessingStatus.CONFIRMING);
       checkPaymentStatus();
 
       // Then check every 3 seconds
@@ -184,11 +184,11 @@ export function PaymentProcessing({
     <div className="space-y-6">
       <Card className="shadow-none rounded-3xl border border-grey-dark-bg p-0 overflow-hidden">
         <div className="text-center bg-grey-accent-bg h-full px-6 py-5">
-          <p className="text-base text-black-text tracking-wide font-sans font-normal">
+          <p className="text-sm md:text-base text-black-text tracking-wide font-sans font-normal">
             {isBankTransfer
               ? "Transfer this exact amount"
               : "Pay this exact amount"}
-            <span className="text-base font-semibold text-green-600 ml-1.5">
+            <span className="text-sm md:text-base font-semibold text-green-600 ml-1.5">
               {amountToDisplay}
             </span>
           </p>
@@ -196,10 +196,10 @@ export function PaymentProcessing({
 
         <div className="space-y-6">
           <div className="text-center space-y-2">
-            <h3 className="text-base font-medium leading-8 max-w-sm mx-auto text-black-text">
+            <h3 className="text-sm md:text-base font-medium leading-8 max-w-xs md:max-w-sm mx-auto text-black-text">
               We are confirming your payment. Please keep this tab open.
             </h3>
-            <p className="text-sm text-grey-text-primary pt-6">
+            <p className="text-xs md:text-sm max-w-xs mx-auto md:max-w-sm text-grey-text-primary pt-6">
               Please wait for the payment to be confirmed
             </p>
           </div>
@@ -229,7 +229,7 @@ export function PaymentProcessing({
                     />
                   </div>
                 </div>
-                <span className="text-sm font-normal text-grey-text-accent absolute -bottom-8">
+                <span className="text-xs md:text-sm font-normal text-grey-text-accent absolute -bottom-8">
                   {steps[0].label}
                 </span>
               </div>
@@ -256,7 +256,7 @@ export function PaymentProcessing({
                   {/* Connection line from Confirming to Received */}
                   <div
                     className={`absolute top-1/2 -translate-y-1/2 left-full h-0.5 bg-grey-dark-bg z-0 transition-all duration-500 ${
-                      showSpinner ? "w-[7.65rem]" : "w-[7rem]"
+                      showSpinner ? "w-26 md:w-[7.65rem]" : "w-20 md:w-[7rem]"
                     }`}
                   >
                     <div
@@ -268,7 +268,7 @@ export function PaymentProcessing({
                     />
                   </div>
                 </div>
-                <span className="text-sm font-normal text-grey-text-accent absolute -bottom-8">
+                <span className="text-xs md:text-sm font-normal text-grey-text-accent absolute -bottom-8">
                   {steps[1].label}
                 </span>
               </div>
@@ -286,7 +286,7 @@ export function PaymentProcessing({
                     {steps[2].icon}
                   </div>
                 </div>
-                <span className="text-sm font-normal text-grey-text-accent absolute -bottom-8">
+                <span className="text-xs md:text-sm font-normal text-grey-text-accent absolute -bottom-8">
                   {steps[2].label}
                 </span>
               </div>
@@ -297,7 +297,7 @@ export function PaymentProcessing({
             <Button
               variant="outline"
               onClick={onShowAccountNumber}
-              className="text-green-600 bg-grey-accent-bg shadow-none w-full py-6 cursor-pointer hover:text-green-600 hover:bg-grey-dark-bg"
+              className="text-xs md:text-base text-green-600 bg-grey-accent-bg shadow-none w-full py-4 md:py-6 cursor-pointer hover:text-green-600 hover:bg-grey-dark-bg"
             >
               {isBankTransfer ? "Show account number" : "Show invoice details"}
             </Button>
@@ -310,17 +310,17 @@ export function PaymentProcessing({
           <div className="bg-white rounded-full p-2">
             <AlertCircle className="w-5 h-5 text-orange-accent-text flex-shrink-0" />
           </div>
-          <div className="text-xs text-orange-accent-text font-inter font-normal max-w-xs">
+          <div className="text-xs text-orange-accent-text font-inter font-normal max-w-xs leading-5">
             Please do not close this tab until your payment has been
             confirmed!!!
           </div>
         </div>
       </Card>
 
-      <div className="text-center w-full">
+      <div className="text-center w-full px-2 md:px-0 mb-4 md:mb-0">
         <Button
           variant="outline"
-          className="w-full py-9 text-red-primary-text shadow-none hover:bg-red-accent-bg-light hover:text-red-primary-text cursor-pointer"
+          className="w-full py-6 md:py-9 text-red-primary-text shadow-none hover:bg-red-accent-bg-light hover:text-red-primary-text cursor-pointer"
         >
           Cancel
         </Button>

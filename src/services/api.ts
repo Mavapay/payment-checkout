@@ -1,10 +1,11 @@
 import axios from "axios";
 import {
+  ApiPaymentStatusType,
   ApiResponse,
   PaymentData,
   PaymentMethodType,
-  PaymentStatusResponse,
 } from "@/types/payment";
+import { ApiPaymentStatus } from "@/types/primitives";
 
 export async function fetchPaymentData(
   paymentId: string,
@@ -99,13 +100,13 @@ export async function refreshPayment(
 
 export async function fetchPaymentStatus(
   orderId: string
-): Promise<ApiResponse<PaymentStatusResponse>> {
+): Promise<ApiResponse<{ status: ApiPaymentStatusType }>> {
   try {
     const params = new URLSearchParams({
       orderId,
     });
 
-    const response = await axios.get<ApiResponse<PaymentStatusResponse>>(
+    const response = await axios.get<ApiResponse<{ status: ApiPaymentStatusType }>>(
       `/api/payment/status?${params.toString()}`,
       {
         headers: {
@@ -125,14 +126,14 @@ export async function fetchPaymentStatus(
         "Failed to fetch payment status";
       return {
         status: "error",
-        data: { status: "PENDING" }, // Default to pending on error
+        data: { status: ApiPaymentStatus.PENDING }, // Default to pending on error
         message,
       };
     }
 
     return {
       status: "error",
-      data: { status: "PENDING" }, // Default to pending on error
+      data: { status: ApiPaymentStatus.PENDING }, // Default to pending on error
       message:
         error instanceof Error
           ? error.message

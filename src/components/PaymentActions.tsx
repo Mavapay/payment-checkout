@@ -52,11 +52,11 @@ export function PaymentActions({
     : "I have Paid";
 
   return (
-    <div className="flex gap-4 px-8 justify-center">
+    <div className="flex flex-col md:flex-row gap-4 px-0 md:px-10 my-4 md:mt-0 justify-center items-center w-full md:w-auto">
       <Button
         variant="outline"
         onClick={onCancel}
-        className="flex-1 rounded-none py-10 px-18 w-full font-sans text-base font-medium text-black-text border-grey-dark-bg hover:text-red-primary-text hover:bg-red-accent-bg-light cursor-pointer"
+        className="flex-1 rounded-none py-6 md:py-10 px-16 w-full font-sans text-base font-medium text-black-text border-grey-dark-bg hover:text-red-primary-text hover:bg-red-accent-bg-light cursor-pointer"
         disabled={isConfirming}
       >
         Cancel
@@ -65,7 +65,7 @@ export function PaymentActions({
       <Button
         onClick={isPaymentExpired ? handleRefreshPayment : handleConfirmPayment}
         disabled={isConfirming}
-        className="flex-1 rounded-none py-10 px-18 w-full font-sans text-base font-medium text-white bg-green-600 hover:bg-green-700 cursor-pointer"
+        className="flex-1 rounded-none py-6 md:py-10 px-16 w-full font-sans text-base font-medium text-white bg-green-600 hover:bg-green-700 cursor-pointer"
       >
         {secondButtonText}
       </Button>

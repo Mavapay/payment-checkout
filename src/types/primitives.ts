@@ -25,7 +25,7 @@ export const storageKeys = {
 
 export const ApiPaymentStatus = {
   PENDING: "PENDING",
-  SUCCESS: "SUCCESS",
+  SETTLED: "SETTLED",
   EXPIRED: "EXPIRED",
   FAILED: "FAILED",
   CANCELLED: "CANCELLED",
