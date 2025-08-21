@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 
 import { Card } from "@/components/ui/card";
-import { fetchPaymentData } from "@/services/api";
+import { fetchPaymentData, refreshPayment } from "@/services/api";
 import { PaymentData, PaymentMethod } from "@/types/payment";
 import { PaymentMethods, PaymentTypes } from "@/types/primitives";
 
@@ -63,6 +63,9 @@ interface PaymentContentSectionProps {
   isProcessing: boolean;
   showAccountDetails: boolean;
   onShowAccountNumber: () => void;
+  onRefreshPayment: () => void;
+  isPaymentExpired: boolean;
+  setIsPaymentExpired: (isPaymentExpired: boolean) => void;
 }
 
 const PaymentContentSection = ({
@@ -75,6 +78,9 @@ const PaymentContentSection = ({
   isProcessing,
   showAccountDetails,
   onShowAccountNumber,
+  onRefreshPayment,
+  isPaymentExpired,
+  setIsPaymentExpired,
 }: PaymentContentSectionProps) => {
   if (!selectedMethod) {
     return <Spinner message="Loading payment details..." />;
@@ -114,12 +120,17 @@ const PaymentContentSection = ({
                 details={paymentData}
                 paymentType={paymentType()}
                 isLoading={isMethodSwitching}
+                isPaymentExpired={isPaymentExpired}
+                setIsPaymentExpired={setIsPaymentExpired}
               />
 
               <PaymentActions
                 paymentId={paymentData.paymentLinkId}
                 onPaymentConfirmed={onPaymentConfirmed}
                 onCancel={onCancel}
+                onRefreshPayment={onRefreshPayment}
+                isPaymentExpired={isPaymentExpired}
+                setIsPaymentExpired={setIsPaymentExpired}
               />
             </>
           )}
@@ -138,6 +149,7 @@ export function CheckoutPage({ paymentId }: CheckoutPageProps) {
   const [isMethodSwitching, setIsMethodSwitching] = useState(false);
   const [isProcessing, setIsProcessing] = useState(false);
   const [showAccountDetails, setShowAccountDetails] = useState(true);
+  const [isPaymentExpired, setIsPaymentExpired] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const router = useRouter();
 
@@ -168,12 +180,36 @@ export function CheckoutPage({ paymentId }: CheckoutPageProps) {
     }
   }, [paymentId]);
 
+  const handleRefreshPayment = async () => {
+    if (!paymentData) return;
+    if (!isPaymentExpired) return;
+    try {
+      setIsLoading(true);
+    const response = await refreshPayment(
+      paymentData.id,
+      selectedMethod?.type ||
+        paymentData.selectedMethod?.type ||
+        PaymentMethods.LIGHTNING
+    );
+    if (response.status === "ok") {
+        setPaymentData(response.data);
+        setIsPaymentExpired(false);
+      }
+    } catch (err) {
+      console.error("Error refreshing payment:", err);
+      setError("Failed to refresh payment");
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
   const handleMethodSelect = async (method: PaymentMethod) => {
     if (selectedMethod?.type === method.type) return;
 
     try {
       setIsMethodSwitching(true);
       setError(null);
+      setIsPaymentExpired(false);
 
       const response = await fetchPaymentData(paymentId, method.type);
 
@@ -229,6 +265,9 @@ export function CheckoutPage({ paymentId }: CheckoutPageProps) {
         isProcessing={isProcessing}
         showAccountDetails={showAccountDetails}
         onShowAccountNumber={handleShowAccountNumber}
+        onRefreshPayment={handleRefreshPayment}
+        isPaymentExpired={isPaymentExpired}
+        setIsPaymentExpired={setIsPaymentExpired}
       />
 
       <PaymentFooter />

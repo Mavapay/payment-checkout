@@ -3,7 +3,7 @@
 import { AlertCircle, Copy } from "lucide-react";
 import Image from "next/image";
 import QRCode from "qrcode";
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
 
 import { Button } from "@/components/ui/button";
@@ -24,12 +24,16 @@ interface PaymentDetailsProps {
   details: PaymentData;
   paymentType: PaymentType;
   isLoading: boolean;
+  setIsPaymentExpired: (isPaymentExpired: boolean) => void;
+  isPaymentExpired: boolean;
 }
 
 export function PaymentDetails({
   details,
   paymentType,
   isLoading,
+  setIsPaymentExpired,
+  isPaymentExpired,
 }: PaymentDetailsProps) {
   const isBankTransfer = paymentType === PaymentTypes.BANKTRANSFER;
   const isLightning = paymentType === PaymentTypes.LIGHTNING;
@@ -72,7 +76,24 @@ export function PaymentDetails({
   const [timeLeft, setTimeLeft] = useState("");
   const [qrCodeDataUrl, setQrCodeDataUrl] = useState<string>("");
 
-  // Generate QR code for Lightning invoice
+  const timeLeftRef = useRef<string>(calculateTimeLeft(details.expiresAt));
+  const isPaymentExpiredRef = useRef(false);
+  const timerRef = useRef<NodeJS.Timeout | null>(null);
+
+  const isExpiredCallback = useCallback(() => {
+    if (isPaymentExpiredRef.current) {
+      return;
+    }
+    if (timeLeftRef.current === "0:00:00") {
+      setIsPaymentExpired(true);
+      isPaymentExpiredRef.current = true;
+    }
+  }, [setIsPaymentExpired]);
+
+  /**
+   * UseEffect to generate QR code for Lightning invoice
+   * This is only run when the payment type is Lightning
+   */
   useEffect(() => {
     if (isLightning && lightningDetails) {
       QRCode.toDataURL(lightningDetails.invoice, {
@@ -103,16 +124,67 @@ export function PaymentDetails({
     }
   }, [isLightning, lightningDetails]);
 
-  // Calculate time left until expiry
+  /**
+   * UseEffect to calculate time left until expiry
+   * and set the payment as expired if the time left is 0
+   * Reset expired state when payment method changes
+   */
   useEffect(() => {
-    setTimeLeft(calculateTimeLeft(details.expiresAt));
-    const timer = setInterval(
-      () => setTimeLeft(calculateTimeLeft(details.expiresAt)),
-      1000
-    );
+    const currentExpiryTime = isBankTransfer
+      ? bankDetails?.expiresAt
+      : isLightning
+      ? lightningDetails?.expiresAt
+      : details.expiresAt;
 
-    return () => clearInterval(timer);
-  }, [details.expiresAt]);
+    if (!currentExpiryTime) return;
+
+    setIsPaymentExpired(false);
+    isPaymentExpiredRef.current = false;
+
+    // Clear any existing timer
+    if (timerRef.current) {
+      clearInterval(timerRef.current);
+    }
+
+    timeLeftRef.current = calculateTimeLeft(currentExpiryTime);
+    setTimeLeft(timeLeftRef.current);
+
+    if (timeLeftRef.current === "0:00:00" && !isPaymentExpiredRef.current) {
+      isExpiredCallback();
+      toast("Payment expired", {
+        description: "Please refresh the payment",
+        style: {
+          background: "#dc2626",
+          color: "white",
+          border: "1px solid #dc2626",
+        },
+      });
+    }
+
+    timerRef.current = setInterval(() => {
+      // we cant use the timeLeft variable here because it will be updated after the setTimeLeft call
+      // and the setTimeLeft call will be executed after the timer is set
+      // so the timer will be set to the wrong time
+      // so we need to use the calculateTimeLeft function to get the correct time
+      timeLeftRef.current = calculateTimeLeft(currentExpiryTime);
+      setTimeLeft(timeLeftRef.current);
+      isExpiredCallback();
+    }, 1000);
+
+    return () => {
+      if (timerRef.current) {
+        clearInterval(timerRef.current);
+      }
+    };
+    // we don't need to re-run this effect when the payment is expired which will lead to an infinite loop
+    // hence, we exclude setIsPaymentExpired, isPaymentExpired, and isLoading from the dependencies
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [
+    paymentType,
+    bankDetails?.expiresAt,
+    lightningDetails?.expiresAt,
+    isExpiredCallback,
+  ]);
 
   const handleCopyToClipboard = async ({
     value,
@@ -144,6 +216,9 @@ export function PaymentDetails({
   };
 
   const getHeaderText = () => {
+    if (isPaymentExpired) {
+      return <>Payment expired</>;
+    }
     if (isLightning && lightningDetails) {
       return (
         <>
@@ -177,14 +252,18 @@ export function PaymentDetails({
   };
 
   const getExpiryText = () => {
-    const baseText = isLightning
+    const baseText = isLoading
+      ? "Loading..."
+      : isLightning
       ? "This Lightning invoice will expire in"
       : "This account is for this transaction only and expires in";
 
     return (
       <div className="text-grey-text-primary">
         {baseText}{" "}
-        <span className="font-semibold text-green-600">{timeLeft}</span>
+        <span className="font-semibold text-green-600">
+          {isLoading ? "..." : timeLeft}
+        </span>
       </div>
     );
   };
@@ -199,7 +278,11 @@ export function PaymentDetails({
     }
 
     return (
-      <div className="flex flex-col items-center space-y-6 px-6 py-0">
+      <div
+        className={`flex flex-col items-center space-y-6 px-6 py-0 ${
+          isPaymentExpired ? "blur-sm" : ""
+        }`}
+      >
         {qrCodeDataUrl && (
           <div className="bg-white p-4 rounded-lg">
             <Image
@@ -238,7 +321,7 @@ export function PaymentDetails({
   };
 
   const BankTransferContent = () => (
-    <div className="space-y-4 px-6">
+    <div className={`space-y-4 px-6 ${isPaymentExpired ? "blur-sm" : ""}`}>
       {PAYMENT_DETAILS_OPTIONS.map((field) => (
         <div key={field.label}>
           <label className="block text-sm font-normal tracking-wider text-black-text mb-2">
@@ -286,7 +369,11 @@ export function PaymentDetails({
     <div className="space-y-6">
       <Card className="shadow-none rounded-3xl border border-grey-dark-bg p-0 overflow-hidden">
         <div className="text-center bg-grey-accent-bg h-full px-6 py-5">
-          <p className="text-base text-black-text tracking-wide font-sans font-normal">
+          <p
+            className={`text-base tracking-wide font-sans font-normal ${
+              isPaymentExpired ? "text-red-primary-text" : "text-black-text"
+            }`}
+          >
             {getHeaderText()}
           </p>
         </div>

@@ -18,5 +18,6 @@ export const getPaymentEndpoints = ({
   return {
     getPaymentDetails,
     getPaymentStatus: `${baseUrl}/paymentlink/status?orderId=${orderId}`,
+    refreshPayment: `${baseUrl}/paymentlink/refresh?id=${id}&paymentMethod=${paymentMethod}`,
   };
 };

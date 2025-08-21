@@ -1,4 +1,4 @@
-import axios from "axios";
+import axios, { AxiosResponse } from "axios";
 import { NextRequest, NextResponse } from "next/server";
 import { getPaymentEndpoints } from "@/config/endpoints";
 import {
@@ -145,6 +145,7 @@ export async function GET(request: NextRequest) {
     const { searchParams } = new URL(request.url);
     const paymentId = searchParams.get("id");
     const paymentMethod = searchParams.get("paymentMethod");
+    const refreshPayment = searchParams.get("refreshPayment");
 
     if (!paymentId) {
       return NextResponse.json(
@@ -175,19 +176,44 @@ export async function GET(request: NextRequest) {
       }
     }
 
+    if (refreshPayment) {
+      // check if it a boolean
+      if (refreshPayment !== "true" && refreshPayment !== "false") {
+        return NextResponse.json(
+          {
+            status: "error",
+            message: "Refresh payment must be a boolean",
+          },
+          { status: 400 }
+        );
+      }
+    }
+
     const endpoints = getPaymentEndpoints({
       id: paymentId,
       paymentMethod: paymentMethod?.toUpperCase() as PaymentMethodType,
     });
 
-    const response = await axios.get<ApiResponse<ApiPaymentData>>(
-      endpoints.getPaymentDetails,
-      {
-        headers: {
-          "Content-Type": "application/json",
-        },
-      }
-    );
+    let response: AxiosResponse<ApiResponse<ApiPaymentData>>;
+    if (refreshPayment) {
+      response = await axios.get<ApiResponse<ApiPaymentData>>(
+        endpoints.refreshPayment,
+        {
+          headers: {
+            "Content-Type": "application/json",
+          },
+        }
+      );
+    } else {
+      response = await axios.get<ApiResponse<ApiPaymentData>>(
+        endpoints.getPaymentDetails,
+        {
+          headers: {
+            "Content-Type": "application/json",
+          },
+        }
+      );
+    }
 
     const apiResponse = response.data;
 

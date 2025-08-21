@@ -2,6 +2,7 @@ import axios from "axios";
 import {
   ApiResponse,
   PaymentData,
+  PaymentMethodType,
   PaymentStatusResponse,
 } from "@/types/payment";
 
@@ -52,46 +53,49 @@ export async function fetchPaymentData(
   }
 }
 
-// export async function confirmPayment(
-//   paymentId: string
-// ): Promise<ApiResponse<{ status: string }>> {
-//   try {
-//     const response = await axios.post<ApiResponse<{ status: string }>>(
-//       "/api/payment/confirm",
-//       {
-//         paymentId,
-//       },
-//       {
-//         headers: {
-//           "Content-Type": "application/json",
-//         },
-//       }
-//     );
+export async function refreshPayment(
+  id: string,
+  paymentMethod: PaymentMethodType
+): Promise<ApiResponse<PaymentData>> {
+  try {
+    const params = new URLSearchParams({
+      id,
+      paymentMethod,
+      refreshPayment: "true",
+    });
 
-//     return response.data;
-//   } catch (error) {
-//     console.error("Error confirming payment:", error);
+    const response = await axios.get<ApiResponse<PaymentData>>(
+      `/api/payment/details?${params.toString()}`,
+      {
+        headers: {
+          "Content-Type": "application/json",
+        },
+      }
+    );
 
-//     if (axios.isAxiosError(error)) {
-//       const message =
-//         error.response?.data?.message ||
-//         error.message ||
-//         "Failed to confirm payment";
-//       return {
-//         status: "error",
-//         data: { status: "error" },
-//         message,
-//       };
-//     }
+    return response.data;
+  } catch (error) {
+    console.error("Error confirming payment:", error);
+    if (axios.isAxiosError(error)) {
+      const message =
+        error.response?.data?.message ||
+        error.message ||
+        "Failed to confirm payment";
+      return {
+        status: "error",
+        data: {} as PaymentData,
+        message,
+      };
+    }
 
-//     return {
-//       status: "error",
-//       data: { status: "error" },
-//       message:
-//         error instanceof Error ? error.message : "Failed to confirm payment",
-//     };
-//   }
-// }
+    return {
+      status: "error",
+      data: {} as PaymentData,
+      message:
+        error instanceof Error ? error.message : "Failed to confirm payment",
+    };
+  }
+}
 
 export async function fetchPaymentStatus(
   orderId: string
@@ -114,7 +118,6 @@ export async function fetchPaymentStatus(
   } catch (error) {
     console.error("Error fetching payment status:", error);
 
-    // Handle axios-specific errors
     if (axios.isAxiosError(error)) {
       const message =
         error.response?.data?.message ||
