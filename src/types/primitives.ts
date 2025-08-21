@@ -17,3 +17,8 @@ export const PaymentTypes = {
   BANKTRANSFER: "bank_transfer",
   LIGHTNING: "lightning",
 } as const;
+
+export const storageKeys = {
+  paymentData: "paymentData",
+  selectedMethod: "selectedMethod",
+} as const;

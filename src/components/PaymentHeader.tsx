@@ -1,33 +1,16 @@
 "use client";
 
 import Image from "next/image";
-import { useEffect, useState } from "react";
-
-import { calculateTimeLeft } from "@/lib/utils";
 
 interface PaymentHeaderProps {
   merchantName: string;
   merchantLogo: string;
-  expiresAt: string;
 }
 
 export function PaymentHeader({
   merchantName,
   merchantLogo,
-  expiresAt,
 }: PaymentHeaderProps) {
-  const [timeLeft, setTimeLeft] = useState("");
-
-  useEffect(() => {
-    setTimeLeft(calculateTimeLeft(expiresAt));
-    const timer = setInterval(
-      () => setTimeLeft(calculateTimeLeft(expiresAt)),
-      1000
-    );
-
-    return () => clearInterval(timer);
-  }, [expiresAt]);
-
   return (
     <div className="flex items-center justify-between w-full h-32 py-0 px-4">
       <div className="flex items-center gap-4">
@@ -52,9 +35,9 @@ export function PaymentHeader({
       <div className="flex items-center gap-4 text-sm text-gray-600">
         <span>PAYMENT LINK FROM {merchantName.toUpperCase()}</span>
         <span>•</span>
-        <span>THIS LINK EXPIRES IN</span>
+        <span>THIS LINK EXPIRES</span>
         <span className="font-mono text-green-600 font-semibold">
-          {timeLeft}
+          AFTER PAYMENT IS RECEIVED
         </span>
       </div>
     </div>

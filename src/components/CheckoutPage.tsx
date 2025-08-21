@@ -47,7 +47,6 @@ const PaymentHeaderSection = ({ paymentData }: PaymentHeaderSectionProps) => (
       <PaymentHeader
         merchantName={paymentData.merchantName}
         merchantLogo={paymentData.merchantLogo}
-        expiresAt={paymentData.expiresAt}
       />
     </div>
   </div>
@@ -185,13 +184,13 @@ export function CheckoutPage({ paymentId }: CheckoutPageProps) {
     if (!isPaymentExpired) return;
     try {
       setIsLoading(true);
-    const response = await refreshPayment(
-      paymentData.id,
-      selectedMethod?.type ||
-        paymentData.selectedMethod?.type ||
-        PaymentMethods.LIGHTNING
-    );
-    if (response.status === "ok") {
+      const response = await refreshPayment(
+        paymentData.id,
+        selectedMethod?.type ||
+          paymentData.selectedMethod?.type ||
+          PaymentMethods.LIGHTNING
+      );
+      if (response.status === "ok") {
         setPaymentData(response.data);
         setIsPaymentExpired(false);
       }

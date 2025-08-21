@@ -9,7 +9,7 @@ import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
-import { calculateTimeLeft, copyToClipboard, formatAmount } from "@/lib/utils";
+import { calculateTimeLeft, copyToClipboard, formatAmount } from "@/lib";
 import {
   BankTransferDetails,
   LightningInvoiceDetails,

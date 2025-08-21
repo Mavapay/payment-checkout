@@ -6,11 +6,12 @@ import { useEffect, useState } from "react";
 
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
-import { formatAmount } from "@/lib/utils";
+import { formatAmount } from "@/lib";
 import { Check, Hourglass } from "@/public/icons";
 import { fetchPaymentStatus } from "@/services/api";
 import { PaymentData } from "@/types/payment";
-import { PaymentMethods } from "@/types/primitives";
+import { PaymentMethods, storageKeys } from "@/types/primitives";
+import { storage } from "@/lib/storage";
 
 interface PaymentProcessingProps {
   paymentData: PaymentData;
@@ -47,6 +48,10 @@ export function PaymentProcessing({
 
           switch (apiStatus) {
             case "PENDING":
+              await storage.setItem(
+                storageKeys.paymentData,
+                paymentData
+              );
               // Move to confirming after initial sent state
               if (currentStatus === "sent") {
                 setTimeout(() => setCurrentStatus("confirming"), 2000);
@@ -54,6 +59,10 @@ export function PaymentProcessing({
               break;
             case "SUCCESS":
               setCurrentStatus("received");
+              await storage.setItem(
+                storageKeys.paymentData,
+                paymentData
+              );
               // Redirect to success page after showing completed state
               setTimeout(() => {
                 router.push(`/checkout/${paymentData.id}/success`);
@@ -91,6 +100,8 @@ export function PaymentProcessing({
         clearInterval(statusCheckInterval);
       }
     };
+    // paymentData is not a dependency because it is not changing when checking status
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [router, paymentData.id, paymentData.orderId, currentStatus]);
 
   const getSteps = (): ProcessingStep[] => [

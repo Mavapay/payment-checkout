@@ -1,14 +1,15 @@
 "use client";
 
-import { useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
+import { useEffect, useState } from "react";
 
-import { PaymentSuccess } from "@/components/PaymentSuccess";
 import { PaymentFooter, PaymentHeader } from "@/components";
+import { PaymentSuccess } from "@/components/PaymentSuccess";
 import { Spinner } from "@/components/Spinner";
 import { Card } from "@/components/ui/card";
-import { fetchPaymentData } from "@/services/api";
+import { storage } from "@/lib/storage";
 import { PaymentData } from "@/types/payment";
+import { storageKeys } from "@/types/primitives";
 
 interface ErrorDisplayProps {
   error: string | null;
@@ -35,7 +36,6 @@ const PaymentHeaderSection = ({
       <PaymentHeader
         merchantName={paymentData.merchantName}
         merchantLogo={paymentData.merchantLogo}
-        expiresAt={paymentData.expiresAt}
       />
     </div>
   </div>
@@ -54,12 +54,16 @@ export default function SuccessPage() {
     const loadPaymentData = async () => {
       try {
         setIsLoading(true);
-        const response = await fetchPaymentData(paymentId);
-
-        if (response.status === "ok") {
-          setPaymentData(response.data);
-        } else {
-          setError(response.message || "Failed to load payment data");
+        const item = await storage.getItem(storageKeys.paymentData);
+        console.log("item", item);
+        if (item) {
+          const dataMatch = (item as PaymentData).id === paymentId;
+          if (dataMatch) {
+            setPaymentData(item as PaymentData);
+          } else {
+            setError("Unable to load payment data");
+          }
+          return;
         }
       } catch (err) {
         setError("An unexpected error occurred");
@@ -75,9 +79,7 @@ export default function SuccessPage() {
   }, [paymentId]);
 
   const handleCloseCheckout = () => {
-    // In a real app, you might redirect to merchant's website or a specific URL
-    // For now, we'll redirect to the home page
-    router.push("/");
+    router.push(paymentData?.callbackUrl || "/");
   };
 
   if (isLoading) {

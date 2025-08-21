@@ -2,9 +2,10 @@
 
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
-import { formatAmount } from "@/lib/utils";
+import { formatAmount } from "@/lib/amount";
 import { PaymentData } from "@/types/payment";
 import { Success } from "@/public/icons/success";
+import { PaymentMethods } from "@/types/primitives";
 
 interface PaymentSuccessProps {
   paymentData: PaymentData;
@@ -15,6 +16,7 @@ export function PaymentSuccess({
   paymentData,
   onCloseCheckout,
 }: PaymentSuccessProps) {
+  const selectedMethod = paymentData.selectedMethod;
   return (
     <div className="space-y-6 h-[calc(100vh-30rem)] flex items-center justify-center">
       <Card className="shadow-none rounded-3xl border border-grey-dark-bg p-0 max-w-lg w-full mx-auto overflow-hidden">
@@ -30,13 +32,13 @@ export function PaymentSuccess({
             <p className="text-base font-normal font-inter text-[#666666]">
               Your payment of{" "}
               <span>
-                {formatAmount(
-                  paymentData.amount,
-                  paymentData.settlementCurrency,
-                  paymentData.bankTransferDetails?.currencySymbol ||
-                    paymentData.lightningInvoiceDetails?.currencySymbol ||
-                    ""
-                )}
+                {selectedMethod?.type === PaymentMethods.BANKTRANSFER
+                  ? formatAmount(
+                      paymentData.bankTransferDetails?.amount || 0,
+                      paymentData.bankTransferDetails?.currency || "",
+                      paymentData.bankTransferDetails?.currencySymbol || ""
+                    )
+                  : `${paymentData.lightningInvoiceDetails?.satsAmount.toLocaleString()} SATS`}
               </span>{" "}
               to {paymentData.merchantName} was successful!
             </p>

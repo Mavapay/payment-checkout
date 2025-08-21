@@ -15,7 +15,7 @@ import {
   precisionByTransactionCurrency,
   TransactionCurrencies,
 } from "@/types/primitives";
-import { getCurrencySymbol } from "@/lib/utils";
+import { getCurrencySymbol } from "@/lib/amount";
 
 // Transform API data to internal format
 const transformApiData = (
