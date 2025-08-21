@@ -30,6 +30,7 @@ interface IconConfig {
   icon: React.ComponentType<{ className?: string }>;
   padding: string;
   size: string;
+  backgroundColor?: string;
 }
 
 const PAYMENT_METHOD_ICONS: Record<PaymentMethodType, IconConfig> = {
@@ -37,11 +38,13 @@ const PAYMENT_METHOD_ICONS: Record<PaymentMethodType, IconConfig> = {
     icon: Bank,
     padding: "p-2",
     size: "w-4 h-4",
+    backgroundColor: "#FFFFFF",
   },
   [PaymentMethodsEnum.LIGHTNING]: {
     icon: Bitcoin,
     padding: "p-1",
     size: "w-6 h-6",
+    backgroundColor: "var(--color-gradient-orange)",
   },
 };
 
@@ -56,7 +59,10 @@ const getMethodIcon = (type: PaymentMethodType) => {
   const IconComponent = config.icon;
 
   return (
-    <div className={`rounded-full bg-white ${config.padding}`}>
+    <div
+      className={`rounded-full ${config.padding}`}
+      style={{ background: config.backgroundColor }}
+    >
       <IconComponent className={config.size} />
     </div>
   );

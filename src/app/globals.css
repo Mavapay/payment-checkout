@@ -42,19 +42,20 @@
   --radius-md: calc(var(--radius) - 2px);
   --radius-lg: var(--radius);
   --radius-xl: calc(var(--radius) + 4px);
-  --color-grey-text-accent: #7F7F7F;
+  --color-grey-text-accent: #7f7f7f;
   --color-grey-text-primary: #616161;
-  --color-grey-accent-bg: #F7F8F9;
-  --color-grey-dark-bg: #E6E8EA;
+  --color-grey-accent-bg: #f7f8f9;
+  --color-grey-dark-bg: #e6e8ea;
   --color-black-text: #090909;
-  --color-green-accent-bg: #F7FDF8;
-  --color-green-primary-bg: #1E7133;
-  --color-green-accent-text: #2EAE4E;
-  --color-orange-accent-text: #C17C08;
-  --color-orange-accent-bg: #FEF9F0;
-  --color-orange-accent-border: #FBE8C6;
-  --color-red-primary-text: #AE0707;
-  --color-red-accent-bg-light: #F5F5F5;
+  --color-green-accent-bg: #f7fdf8;
+  --color-green-primary-bg: #1e7133;
+  --color-green-accent-text: #2eae4e;
+  --color-orange-accent-text: #c17c08;
+  --color-orange-accent-bg: #fef9f0;
+  --color-orange-accent-border: #fbe8c6;
+  --color-red-primary-text: #ae0707;
+  --color-red-accent-bg-light: #f5f5f5;
+  --color-gradient-orange: linear-gradient(180deg, #f97216 0%, #fcd116 100%);
 }
 
 :root {
