@@ -57,7 +57,10 @@ export function PaymentProcessing({
             case ApiPaymentStatus.PENDING:
               await storage.setItem(storageKeys.paymentData, paymentData);
               if (currentStatus === ProcessingStatus.SENT) {
-                setTimeout(() => setCurrentStatus(ProcessingStatus.CONFIRMING), 2000);
+                setTimeout(
+                  () => setCurrentStatus(ProcessingStatus.CONFIRMING),
+                  2000
+                );
               }
               break;
             case ApiPaymentStatus.SETTLED:
@@ -196,7 +199,7 @@ export function PaymentProcessing({
 
         <div className="space-y-6">
           <div className="text-center space-y-2">
-            <h3 className="text-sm md:text-base font-medium leading-8 max-w-xs md:max-w-sm mx-auto text-black-text">
+            <h3 className="text-sm md:text-base font-medium leading-5 max-w-xs md:max-w-sm mx-auto text-black-text">
               We are confirming your payment. Please keep this tab open.
             </h3>
             <p className="text-xs md:text-sm max-w-xs mx-auto md:max-w-sm text-grey-text-primary pt-6">
@@ -297,7 +300,7 @@ export function PaymentProcessing({
             <Button
               variant="outline"
               onClick={onShowAccountNumber}
-              className="text-xs md:text-base text-green-600 bg-grey-accent-bg shadow-none w-full py-4 md:py-6 cursor-pointer hover:text-green-600 hover:bg-grey-dark-bg"
+              className="text-xs md:text-base text-green-600 bg-grey-accent-bg shadow-none w-full py-5 md:py-6 cursor-pointer hover:text-green-600 hover:bg-grey-dark-bg"
             >
               {isBankTransfer ? "Show account number" : "Show invoice details"}
             </Button>
@@ -320,7 +323,7 @@ export function PaymentProcessing({
       <div className="text-center w-full px-2 md:px-0 mb-4 md:mb-0">
         <Button
           variant="outline"
-          className="w-full py-6 md:py-9 text-red-primary-text shadow-none hover:bg-red-accent-bg-light hover:text-red-primary-text cursor-pointer"
+          className="w-full py-7 md:py-9 text-red-primary-text shadow-none hover:bg-red-accent-bg-light hover:text-red-primary-text cursor-pointer"
         >
           Cancel
         </Button>

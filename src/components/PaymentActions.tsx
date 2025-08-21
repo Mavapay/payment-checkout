@@ -56,7 +56,7 @@ export function PaymentActions({
       <Button
         variant="outline"
         onClick={onCancel}
-        className="flex-1 rounded-none py-6 md:py-10 px-16 w-full font-sans text-base font-medium text-black-text border-grey-dark-bg hover:text-red-primary-text hover:bg-red-accent-bg-light cursor-pointer"
+        className="flex-1 order-2 md:order-1 rounded-none py-6 md:py-10 px-16 w-full font-sans text-base font-medium text-black-text border-grey-dark-bg hover:text-red-primary-text hover:bg-red-accent-bg-light cursor-pointer"
         disabled={isConfirming}
       >
         Cancel
@@ -65,7 +65,7 @@ export function PaymentActions({
       <Button
         onClick={isPaymentExpired ? handleRefreshPayment : handleConfirmPayment}
         disabled={isConfirming}
-        className="flex-1 rounded-none py-6 md:py-10 px-16 w-full font-sans text-base font-medium text-white bg-green-600 hover:bg-green-700 cursor-pointer"
+        className="flex-1 order-1 md:order-2 rounded-none py-6 md:py-10 px-16 w-full font-sans text-base font-medium text-white bg-green-600 hover:bg-green-700 cursor-pointer"
       >
         {secondButtonText}
       </Button>

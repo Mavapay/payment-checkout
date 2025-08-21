@@ -378,8 +378,8 @@ export function PaymentDetails({
         </div>
 
         {isLoading ? (
-          <div className="max-h-80 flex justify-center items-center bg-transparent">
-            <Spinner className="bg-transparent" />
+          <div className="max-h-80 flex justify-center items-center bg-green-accent-bg">
+            <Spinner className="bg-green-accent-bg" />
           </div>
         ) : isLightning ? (
           <LightningContent />
