@@ -19,7 +19,6 @@ export const storage = {
 
   setItem: async <T = unknown>(key: string, value: T): Promise<void> => {
     try {
-      console.log("Setting item in storage:", key, value);
       await storageInstance.setItem(key, value);
     } catch (error) {
       console.error("Error setting item in storage:", error);
