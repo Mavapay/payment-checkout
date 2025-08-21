@@ -6,10 +6,11 @@ import { useEffect, useState } from "react";
 
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
+import { formatAmount } from "@/lib/utils";
 import { Check, Hourglass } from "@/public/icons";
+import { fetchPaymentStatus } from "@/services/api";
 import { PaymentData } from "@/types/payment";
 import { PaymentMethods } from "@/types/primitives";
-import { fetchPaymentStatus } from "@/services/api";
 
 interface PaymentProcessingProps {
   paymentData: PaymentData;
@@ -26,61 +27,32 @@ interface ProcessingStep {
   active: boolean;
 }
 
-const formatAmount = (amount: number, currency: string) => {
-  return `${currency} ${amount.toLocaleString()}`;
-};
-
 export function PaymentProcessing({
   paymentData,
   onShowAccountNumber,
 }: PaymentProcessingProps) {
   const router = useRouter();
   const [currentStatus, setCurrentStatus] = useState<ProcessingStatus>("sent");
-  const [timeLeft, setTimeLeft] = useState("");
-
-  // Calculate time left until expiry
-  useEffect(() => {
-    const calculateTimeLeft = () => {
-      const now = new Date().getTime();
-      const expiry = new Date(paymentData.expiresAt).getTime();
-      const difference = expiry - now;
-
-      if (difference > 0) {
-        const minutes = Math.floor(
-          (difference % (1000 * 60 * 60)) / (1000 * 60)
-        );
-        const seconds = Math.floor((difference % (1000 * 60)) / 1000);
-        setTimeLeft(`${minutes}:${seconds.toString().padStart(2, "0")}`);
-      } else {
-        setTimeLeft("0:00");
-      }
-    };
-
-    calculateTimeLeft();
-    const timer = setInterval(calculateTimeLeft, 1000);
-    return () => clearInterval(timer);
-  }, [paymentData.expiresAt]);
 
   // Check payment status periodically
   useEffect(() => {
     let statusCheckInterval: NodeJS.Timeout;
-    
+
     const checkPaymentStatus = async () => {
       try {
         const response = await fetchPaymentStatus(paymentData.orderId);
-        
-        if (response.status === 'ok') {
+
+        if (response.status === "ok") {
           const apiStatus = response.data.status;
-          
-          // Map API status to internal status
+
           switch (apiStatus) {
-            case 'PENDING':
+            case "PENDING":
               // Move to confirming after initial sent state
-              if (currentStatus === 'sent') {
+              if (currentStatus === "sent") {
                 setTimeout(() => setCurrentStatus("confirming"), 2000);
               }
               break;
-            case 'SUCCESS':
+            case "SUCCESS":
               setCurrentStatus("received");
               // Redirect to success page after showing completed state
               setTimeout(() => {
@@ -91,15 +63,15 @@ export function PaymentProcessing({
                 clearInterval(statusCheckInterval);
               }
               break;
-            case 'FAILED':
+            case "FAILED":
               // Handle failed payment - could show error state
-              console.error('Payment failed');
+              console.error("Payment failed");
               // For now, keep in confirming state
               break;
           }
         }
       } catch (error) {
-        console.error('Error checking payment status:', error);
+        console.error("Error checking payment status:", error);
         // Continue checking on error
       }
     };
@@ -108,7 +80,7 @@ export function PaymentProcessing({
     const initialTimer = setTimeout(() => {
       setCurrentStatus("confirming");
       checkPaymentStatus();
-      
+
       // Then check every 3 seconds
       statusCheckInterval = setInterval(checkPaymentStatus, 3000);
     }, 2000);
@@ -156,18 +128,27 @@ export function PaymentProcessing({
   ];
 
   const steps = getSteps();
-  const isBankTransfer = paymentData.paymentMethods.some(
-    (method) => method.type === PaymentMethods.BANKTRANSFER
-  );
+  const isBankTransfer =
+    paymentData.selectedMethod?.type === PaymentMethods.BANKTRANSFER;
+
+  const amountToDisplay = isBankTransfer
+    ? formatAmount(
+        paymentData.bankTransferDetails?.amount || 0,
+        paymentData.bankTransferDetails?.currency || "",
+        paymentData.bankTransferDetails?.currencySymbol || ""
+      )
+    : `${paymentData.lightningInvoiceDetails?.satsAmount.toLocaleString()} SATS`;
 
   return (
     <div className="space-y-6">
       <Card className="shadow-none rounded-3xl border border-grey-dark-bg p-0 overflow-hidden">
         <div className="text-center bg-grey-accent-bg h-full px-6 py-5">
           <p className="text-base text-black-text tracking-wide font-sans font-normal">
-            Transfer this exact amount
-            <span className="text-base font-normal text-green-600 ml-1.5">
-              {formatAmount(paymentData.amount, paymentData.settlementCurrency)}
+            {isBankTransfer
+              ? "Transfer this exact amount"
+              : "Pay this exact amount"}
+            <span className="text-base font-semibold text-green-600 ml-1.5">
+              {amountToDisplay}
             </span>
           </p>
         </div>
@@ -175,11 +156,10 @@ export function PaymentProcessing({
         <div className="space-y-6">
           <div className="text-center space-y-2">
             <h3 className="text-base font-medium leading-8 max-w-sm mx-auto text-black-text">
-              We are waiting to confirm your payment. Please keep this tab open
+              We are confirming your payment. Please keep this tab open.
             </h3>
             <p className="text-sm text-grey-text-primary pt-6">
-              Please wait for{" "}
-              <span className="font-semibold text-green-600">{timeLeft}</span>
+              Please wait for the payment to be confirmed
             </p>
           </div>
 
