@@ -80,6 +80,7 @@ export default function SuccessPage() {
 
   const handleCloseCheckout = () => {
     router.push(paymentData?.callbackUrl || "/");
+    storage.removeItem(storageKeys.paymentData);
   };
 
   if (isLoading) {

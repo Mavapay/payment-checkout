@@ -9,8 +9,13 @@ import { Card } from "@/components/ui/card";
 import { formatAmount } from "@/lib";
 import { Check, Hourglass } from "@/public/icons";
 import { fetchPaymentStatus } from "@/services/api";
-import { PaymentData } from "@/types/payment";
-import { PaymentMethods, storageKeys } from "@/types/primitives";
+import { PaymentData, ProcessingStatusType } from "@/types/payment";
+import {
+  ApiPaymentStatus,
+  PaymentMethods,
+  ProcessingStatus,
+  storageKeys,
+} from "@/types/primitives";
 import { storage } from "@/lib/storage";
 
 interface PaymentProcessingProps {
@@ -18,10 +23,8 @@ interface PaymentProcessingProps {
   onShowAccountNumber: () => void;
 }
 
-type ProcessingStatus = "sent" | "confirming" | "received";
-
 interface ProcessingStep {
-  id: ProcessingStatus;
+  id: ProcessingStatusType;
   label: string;
   icon: React.ReactNode;
   completed: boolean;
@@ -33,9 +36,10 @@ export function PaymentProcessing({
   onShowAccountNumber,
 }: PaymentProcessingProps) {
   const router = useRouter();
-  const [currentStatus, setCurrentStatus] = useState<ProcessingStatus>("sent");
+  const [currentStatus, setCurrentStatus] = useState<ProcessingStatusType>(
+    ProcessingStatus.SENT
+  );
 
-  // Check payment status periodically
   useEffect(() => {
     let statusCheckInterval: NodeJS.Timeout;
 
@@ -47,33 +51,24 @@ export function PaymentProcessing({
           const apiStatus = response.data.status;
 
           switch (apiStatus) {
-            case "PENDING":
-              await storage.setItem(
-                storageKeys.paymentData,
-                paymentData
-              );
-              // Move to confirming after initial sent state
-              if (currentStatus === "sent") {
+            case ApiPaymentStatus.PENDING:
+              await storage.setItem(storageKeys.paymentData, paymentData);
+              if (currentStatus === ProcessingStatus.SENT) {
                 setTimeout(() => setCurrentStatus("confirming"), 2000);
               }
               break;
-            case "SUCCESS":
+            case ApiPaymentStatus.SUCCESS:
               setCurrentStatus("received");
-              await storage.setItem(
-                storageKeys.paymentData,
-                paymentData
-              );
-              // Redirect to success page after showing completed state
+              await storage.setItem(storageKeys.paymentData, paymentData);
               setTimeout(() => {
                 router.push(`/checkout/${paymentData.id}/success`);
               }, 2000);
-              // Clear the interval since payment is complete
               if (statusCheckInterval) {
                 clearInterval(statusCheckInterval);
               }
               break;
-            case "FAILED":
-              // Handle failed payment - could show error state
+            case ApiPaymentStatus.FAILED:
+              // Handle failed payment - could show error state TODO!
               console.error("Payment failed");
               // For now, keep in confirming state
               break;
@@ -110,31 +105,31 @@ export function PaymentProcessing({
       label: "Sent",
       icon: <Check className="w-4 h-4 text-white" />,
       completed: true,
-      active: currentStatus === "sent",
+      active: currentStatus === ProcessingStatus.SENT,
     },
     {
       id: "confirming",
       label: "Confirming",
       icon:
-        currentStatus === "confirming" ? (
+        currentStatus === ProcessingStatus.CONFIRMING ? (
           <div className="animate-spin rounded-full h-4 w-4 border-2 border-white border-t-transparent" />
         ) : (
           <Check className="w-4 h-4" />
         ),
-      completed: currentStatus === "received",
-      active: currentStatus === "confirming",
+      completed: currentStatus === ProcessingStatus.RECEIVED,
+      active: currentStatus === ProcessingStatus.CONFIRMING,
     },
     {
       id: "received",
       label: "Received",
       icon:
-        currentStatus === "received" ? (
+        currentStatus === ProcessingStatus.RECEIVED ? (
           <Check className="w-4 h-4 text-white" />
         ) : (
           <Hourglass className="w-4 h-4 text-grey-text-primary" />
         ),
-      completed: currentStatus === "received",
-      active: currentStatus === "received",
+      completed: currentStatus === ProcessingStatus.RECEIVED,
+      active: currentStatus === ProcessingStatus.RECEIVED,
     },
   ];
 

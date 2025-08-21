@@ -22,3 +22,17 @@ export const storageKeys = {
   paymentData: "paymentData",
   selectedMethod: "selectedMethod",
 } as const;
+
+export const ApiPaymentStatus = {
+  PENDING: "PENDING",
+  SUCCESS: "SUCCESS",
+  EXPIRED: "EXPIRED",
+  FAILED: "FAILED",
+  CANCELLED: "CANCELLED",
+} as const;
+
+export const ProcessingStatus = {
+  SENT: "sent",
+  CONFIRMING: "confirming",
+  RECEIVED: "received",
+} as const;

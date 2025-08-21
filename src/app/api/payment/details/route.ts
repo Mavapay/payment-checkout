@@ -1,6 +1,8 @@
 import axios, { AxiosResponse } from "axios";
 import { NextRequest, NextResponse } from "next/server";
+
 import { getPaymentEndpoints } from "@/config/endpoints";
+import { getCurrencySymbol } from "@/lib/amount";
 import {
   ApiPaymentData,
   ApiResponse,
@@ -11,11 +13,11 @@ import {
   PaymentMethodType,
 } from "@/types/payment";
 import {
+  ApiPaymentStatus,
   PaymentMethods,
   precisionByTransactionCurrency,
   TransactionCurrencies,
 } from "@/types/primitives";
-import { getCurrencySymbol } from "@/lib/amount";
 
 // Transform API data to internal format
 const transformApiData = (
@@ -134,7 +136,7 @@ const transformApiData = (
     bankTransferDetails,
     lightningInvoiceDetails,
     paymentLinkId: details.paymentLinkOrderId,
-    status: "pending", // Always pending for new payments
+    status: ApiPaymentStatus.PENDING, // Always pending for new payments
     orderId: details.paymentLinkOrderId,
     callbackUrl: details.callbackUrl,
   };

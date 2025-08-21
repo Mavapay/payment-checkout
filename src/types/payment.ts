@@ -1,4 +1,6 @@
 import {
+  ApiPaymentStatus,
+  ProcessingStatus,
   PaymentMethods,
   PaymentTypes,
   TransactionCurrencies,
@@ -80,7 +82,7 @@ export interface PaymentData {
   selectedMethod?: PaymentMethod;
   bankTransferDetails?: BankTransferDetails;
   lightningInvoiceDetails?: LightningInvoiceDetails;
-  status: "pending" | "completed" | "expired" | "cancelled";
+  status: ApiPaymentStatus;
   orderId: string;
   paymentLinkId: string;
   callbackUrl: string;
@@ -103,3 +105,9 @@ export type TransactionCurrency =
   (typeof TransactionCurrencies)[keyof typeof TransactionCurrencies];
 
 export type PaymentType = (typeof PaymentTypes)[keyof typeof PaymentTypes];
+
+export type ApiPaymentStatus =
+  (typeof ApiPaymentStatus)[keyof typeof ApiPaymentStatus];
+
+export type ProcessingStatusType =
+  (typeof ProcessingStatus)[keyof typeof ProcessingStatus];
