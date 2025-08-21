@@ -2,7 +2,7 @@
 
 import { AlertCircle } from "lucide-react";
 import { useRouter } from "next/navigation";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
@@ -36,6 +36,9 @@ export function PaymentProcessing({
   onShowAccountNumber,
 }: PaymentProcessingProps) {
   const router = useRouter();
+
+  const [showSpinner, setShowSpinner] = useState(true);
+  const alternatingTimerRef = useRef<NodeJS.Timeout | null>(null);
   const [currentStatus, setCurrentStatus] = useState<ProcessingStatusType>(
     ProcessingStatus.SENT
   );
@@ -76,7 +79,7 @@ export function PaymentProcessing({
         }
       } catch (error) {
         console.error("Error checking payment status:", error);
-        // Continue checking on error
+        // TODO: Handle error
       }
     };
 
@@ -99,6 +102,32 @@ export function PaymentProcessing({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [router, paymentData.id, paymentData.orderId, currentStatus]);
 
+  /*
+   * Effect to handle alternating display of spinner and text during confirming state
+   */
+  useEffect(() => {
+    if (currentStatus === ProcessingStatus.CONFIRMING) {
+      setShowSpinner(true);
+
+      alternatingTimerRef.current = setInterval(() => {
+        setShowSpinner((prev) => !prev);
+      }, 2000);
+    } else {
+      // Clear the alternating timer when not confirming
+      if (alternatingTimerRef.current) {
+        clearInterval(alternatingTimerRef.current);
+        alternatingTimerRef.current = null;
+      }
+      setShowSpinner(true);
+    }
+
+    return () => {
+      if (alternatingTimerRef.current) {
+        clearInterval(alternatingTimerRef.current);
+      }
+    };
+  }, [currentStatus]);
+
   const getSteps = (): ProcessingStep[] => [
     {
       id: "sent",
@@ -112,7 +141,13 @@ export function PaymentProcessing({
       label: "Confirming",
       icon:
         currentStatus === ProcessingStatus.CONFIRMING ? (
-          <div className="animate-spin rounded-full h-4 w-4 border-2 border-white border-t-transparent" />
+          showSpinner ? (
+            <div className="animate-spin rounded-full h-4 w-4 border-2 border-white border-t-transparent" />
+          ) : (
+            <div className="text-xs text-white font-sans font-medium whitespace-nowrap">
+              Hold on a little...
+            </div>
+          )
         ) : (
           <Check className="w-4 h-4" />
         ),
@@ -170,44 +205,91 @@ export function PaymentProcessing({
           </div>
 
           <div className="relative flex items-center justify-center w-full px-4">
-            <div className="flex justify-center items-center space-x-31 border py-1.5 bg-grey-accent-bg rounded-full w-full">
-              {steps.map((step, index) => (
-                <div
-                  key={step.id}
-                  className="flex flex-col items-center relative"
-                >
-                  <div className="relative">
-                    <div
-                      className={`w-9 h-9 rounded-full flex items-center justify-center transition-colors duration-300 z-10 ${
-                        step.completed || step.active
-                          ? "bg-green-600 text-white"
-                          : "bg-grey-dark-bg text-grey-text-accent"
-                      }`}
-                    >
-                      {step.icon}
-                    </div>
-
-                    {index < steps.length - 1 && (
-                      <div className="absolute top-1/2 -translate-y-1/2 left-full w-32 h-0.5 bg-grey-dark-bg z-0">
-                        <div
-                          className={`h-full transition-all duration-500 ${
-                            steps[index + 1].completed ||
-                            steps[index + 1].active
-                              ? "bg-green-600 w-full"
-                              : "bg-grey-dark-bg w-0"
-                          }`}
-                        />
-                      </div>
-                    )}
-                  </div>
-
-                  <span
-                    className={`text-sm font-normal text-grey-text-accent absolute -bottom-8`}
+            <div className="relative border py-1.5 bg-grey-accent-bg rounded-full w-full h-12">
+              {/* Sent Step - Fixed Left Position */}
+              <div className="absolute left-1.5 top-1/2 -translate-y-1/2 flex flex-col items-center">
+                <div className="relative">
+                  <div
+                    className={`w-9 h-9 rounded-full flex items-center justify-center transition-colors duration-300 z-10 ${
+                      steps[0].completed || steps[0].active
+                        ? "bg-green-600 text-white"
+                        : "bg-grey-dark-bg text-grey-text-accent"
+                    }`}
                   >
-                    {step.label}
-                  </span>
+                    {steps[0].icon}
+                  </div>
+                  {/* Connection line from Sent to Confirming */}
+                  <div className="absolute top-1/2 -translate-y-1/2 left-full w-32 h-0.5 bg-grey-dark-bg z-0">
+                    <div
+                      className={`h-full transition-all duration-500 ${
+                        steps[1].completed || steps[1].active
+                          ? "bg-green-600 w-full"
+                          : "bg-grey-dark-bg w-0"
+                      }`}
+                    />
+                  </div>
                 </div>
-              ))}
+                <span className="text-sm font-normal text-grey-text-accent absolute -bottom-8">
+                  {steps[0].label}
+                </span>
+              </div>
+
+              {/* Confirming Step - Fixed Center Position */}
+              <div className="absolute left-1/2 -translate-x-1/2 top-1/2 -translate-y-1/2 flex flex-col items-center">
+                <div className="relative">
+                  <div
+                    className={`flex items-center justify-center transition-all duration-500 z-10 ${
+                      steps[1].completed || steps[1].active
+                        ? "bg-green-600 text-white"
+                        : "bg-grey-dark-bg text-grey-text-accent"
+                    } ${
+                      steps[1].id === "confirming" &&
+                      currentStatus === ProcessingStatus.CONFIRMING
+                        ? showSpinner
+                          ? "w-9 h-9 rounded-full"
+                          : "w-32 h-9 px-4 rounded-full"
+                        : "w-9 h-9 rounded-full"
+                    }`}
+                  >
+                    {steps[1].icon}
+                  </div>
+                  {/* Connection line from Confirming to Received */}
+                  <div
+                    className={`absolute top-1/2 -translate-y-1/2 left-full h-0.5 bg-grey-dark-bg z-0 transition-all duration-500 ${
+                      showSpinner ? "w-[7.65rem]" : "w-[7rem]"
+                    }`}
+                  >
+                    <div
+                      className={`h-full transition-all duration-500 ${
+                        steps[2].completed || steps[2].active
+                          ? "bg-green-600 w-full"
+                          : "bg-grey-dark-bg w-0"
+                      }`}
+                    />
+                  </div>
+                </div>
+                <span className="text-sm font-normal text-grey-text-accent absolute -bottom-8">
+                  {steps[1].label}
+                </span>
+              </div>
+
+              {/* Received Step - Fixed Right Position */}
+              <div className="absolute right-1.5 top-1/2 -translate-y-1/2 flex flex-col items-center">
+                <div className="relative">
+                  <div
+                    className={`w-9 h-9 rounded-full flex items-center justify-center transition-colors duration-300 z-10 ${
+                      steps[2].completed || steps[2].active
+                        ? "bg-green-600 text-white"
+                        : "bg-grey-dark-bg text-grey-text-accent"
+                    }`}
+                  >
+                    {steps[2].icon}
+                  </div>
+                </div>
+                <span className="text-sm font-normal text-grey-text-accent absolute -bottom-8">
+                  {steps[2].label}
+                </span>
+              </div>
             </div>
           </div>
 

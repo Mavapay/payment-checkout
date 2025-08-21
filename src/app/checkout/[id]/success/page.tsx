@@ -55,7 +55,6 @@ export default function SuccessPage() {
       try {
         setIsLoading(true);
         const item = await storage.getItem(storageKeys.paymentData);
-        console.log("item", item);
         if (item) {
           const dataMatch = (item as PaymentData).id === paymentId;
           if (dataMatch) {

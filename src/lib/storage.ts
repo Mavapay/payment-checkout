@@ -9,7 +9,6 @@ const storageInstance = localforage.createInstance({
 export const storage = {
   getItem: async <T = unknown>(key: string): Promise<T | null> => {
     try {
-      console.log("getting item", key);
       const item = await storageInstance.getItem<T>(key);
       return item;
     } catch (error) {
@@ -20,7 +19,6 @@ export const storage = {
 
   setItem: async <T = unknown>(key: string, value: T): Promise<void> => {
     try {
-      console.log("setting item", key, value);
       await storageInstance.setItem(key, value);
     } catch (error) {
       console.error("Error setting item in storage:", error);
