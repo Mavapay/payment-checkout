@@ -52,7 +52,7 @@ export function PaymentActions({
     : "I have Paid";
 
   return (
-    <div className="flex flex-col md:flex-row gap-4 px-0 md:px-10 my-4 md:mt-0 justify-center items-center w-full md:w-auto">
+    <div className="flex flex-col md:flex-row gap-4 px-0 md:px-16 my-4 md:mt-0 justify-center items-center w-full">
       <Button
         variant="outline"
         onClick={onCancel}
