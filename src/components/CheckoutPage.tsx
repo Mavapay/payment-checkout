@@ -100,7 +100,6 @@ interface PaymentContentSectionProps {
   onCancel: () => void;
   isMethodSwitching: boolean;
   isProcessing: boolean;
-  showAccountDetails: boolean;
   onShowAccountNumber: () => void;
   onRefreshPayment: () => void;
   isPaymentExpired: boolean;
@@ -115,7 +114,6 @@ const PaymentContentSection = ({
   onCancel,
   isMethodSwitching,
   isProcessing,
-  showAccountDetails,
   onShowAccountNumber,
   onRefreshPayment,
   isPaymentExpired,
@@ -148,7 +146,7 @@ const PaymentContentSection = ({
             {paymentData.description}
           </p>
 
-          {isProcessing && !showAccountDetails ? (
+          {isProcessing ? (
             <PaymentProcessing
               paymentData={paymentData}
               onShowAccountNumber={onShowAccountNumber}
@@ -187,7 +185,6 @@ export function CheckoutPage({ paymentId }: CheckoutPageProps) {
   const [isLoading, setIsLoading] = useState(true);
   const [isMethodSwitching, setIsMethodSwitching] = useState(false);
   const [isProcessing, setIsProcessing] = useState(false);
-  const [showAccountDetails, setShowAccountDetails] = useState(true);
   const [isPaymentExpired, setIsPaymentExpired] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const router = useRouter();
@@ -218,6 +215,18 @@ export function CheckoutPage({ paymentId }: CheckoutPageProps) {
       loadPaymentData();
     }
   }, [paymentId]);
+
+  useEffect(() => {
+    if (!paymentData || isProcessing || isPaymentExpired) return;
+
+    const autoProcessTimer = setTimeout(() => {
+      setIsProcessing(true);
+    }, 20000); // 20 seconds
+
+    return () => {
+      clearTimeout(autoProcessTimer);
+    };
+  }, [paymentData, isProcessing, isPaymentExpired]);
 
   const handleRefreshPayment = async () => {
     if (!paymentData) return;
@@ -271,11 +280,11 @@ export function CheckoutPage({ paymentId }: CheckoutPageProps) {
 
   const handlePaymentConfirmed = () => {
     setIsProcessing(true);
-    setShowAccountDetails(false);
   };
 
   const handleShowAccountNumber = () => {
-    setShowAccountDetails(true);
+    // Go back to payment details view
+    setIsProcessing(false);
   };
 
   const handleCancel = () => {
@@ -307,7 +316,6 @@ export function CheckoutPage({ paymentId }: CheckoutPageProps) {
         onCancel={handleCancel}
         isMethodSwitching={isMethodSwitching}
         isProcessing={isProcessing}
-        showAccountDetails={showAccountDetails}
         onShowAccountNumber={handleShowAccountNumber}
         onRefreshPayment={handleRefreshPayment}
         isPaymentExpired={isPaymentExpired}
