@@ -259,7 +259,7 @@ export function PaymentProcessing({
                   {/* Connection line from Confirming to Received */}
                   <div
                     className={`absolute top-1/2 -translate-y-1/2 left-full h-0.5 bg-grey-dark-bg z-0 transition-all duration-500 ${
-                      showSpinner ? "w-26 md:w-[7.65rem]" : "w-20 md:w-[7rem]"
+                      showSpinner ? "w-28 md:w-[7.65rem]" : "w-20 md:w-[7rem]"
                     }`}
                   >
                     <div

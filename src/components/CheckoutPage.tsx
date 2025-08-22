@@ -3,9 +3,17 @@
 import { useEffect, useState } from "react";
 
 import { Card } from "@/components/ui/card";
-import { fetchPaymentData, refreshPayment } from "@/services/api";
+import {
+  fetchPaymentData,
+  fetchPaymentStatus,
+  refreshPayment,
+} from "@/services/api";
 import { PaymentData, PaymentMethod } from "@/types/payment";
-import { PaymentMethods, PaymentTypes } from "@/types/primitives";
+import {
+  ApiPaymentStatus,
+  PaymentMethods,
+  PaymentTypes,
+} from "@/types/primitives";
 
 import {
   PaymentActions,
@@ -219,12 +227,22 @@ export function CheckoutPage({ paymentId }: CheckoutPageProps) {
   useEffect(() => {
     if (!paymentData || isProcessing || isPaymentExpired) return;
 
-    const autoProcessTimer = setTimeout(() => {
-      setIsProcessing(true);
-    }, 20000); // 20 seconds
+    const autoProcessInterval = setInterval(() => {
+      const checkPaymentStatus = async () => {
+        const response = await fetchPaymentStatus(paymentData.orderId);
+        if (
+          response.status === "ok" &&
+          response.data.status === ApiPaymentStatus.SETTLED
+        ) {
+          setIsProcessing(true);
+          clearInterval(autoProcessInterval);
+        }
+      };
+      checkPaymentStatus();
+    }, 5000); // 5 seconds
 
     return () => {
-      clearTimeout(autoProcessTimer);
+      clearInterval(autoProcessInterval);
     };
   }, [paymentData, isProcessing, isPaymentExpired]);
 
