@@ -60,7 +60,9 @@ export default function SuccessPage() {
           if (dataMatch) {
             setPaymentData(item as PaymentData);
           } else {
-            setError("Unable to load payment data");
+            setError(
+              "Unable to load payment data. Please try again or contact support at info@mavapay.co."
+            );
           }
           return;
         }

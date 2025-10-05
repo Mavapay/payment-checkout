@@ -16,10 +16,10 @@ import {
   ApiPaymentStatus,
   PaymentMethods,
   precisionByTransactionCurrency,
+  SettlementCurrencies,
   TransactionCurrencies,
 } from "@/types/primitives";
 
-// Transform API data to internal format
 const transformApiData = (
   apiData: ApiPaymentData,
   requestedPaymentMethod?: PaymentMethodType,
@@ -27,7 +27,6 @@ const transformApiData = (
 ): PaymentData => {
   const details = apiData.paymentLinkDetails;
 
-  // Build available payment methods based on what's supported
   const availablePaymentMethods: PaymentMethod[] = [];
 
   if (details.paymentMethods.includes(PaymentMethods.BANKTRANSFER)) {
@@ -69,15 +68,8 @@ const transformApiData = (
     return availablePaymentMethods[0];
   };
 
-  // Determine selected method based on request or default
-  let selectedMethod: PaymentMethod;
-  if (requestedPaymentMethod) {
-    selectedMethod = getDefaultMethod();
-  } else {
-    selectedMethod = getDefaultMethod();
-  }
+  const selectedMethod: PaymentMethod = getDefaultMethod();
 
-  // Build bank transfer details if available (regardless of selected method)
   const bankTransferDetails: BankTransferDetails | undefined =
     details.BANKTRANSFER
       ? {
@@ -87,14 +79,17 @@ const transformApiData = (
           amount:
             details.BANKTRANSFER.amount /
             precisionByTransactionCurrency[TransactionCurrencies.NGNKOBO],
-          targetAmount: details.BANKTRANSFER.targetAmount,
+          targetAmount:
+            details.settlementCurrency === SettlementCurrencies.BTC
+              ? details.BANKTRANSFER.targetAmount
+              : details.BANKTRANSFER.targetAmount /
+                precisionByTransactionCurrency[TransactionCurrencies.NGNKOBO],
           currencySymbol: getCurrencySymbol(TransactionCurrencies.NGNKOBO), // NGN symbol TODO: use currency from the API to determine the currency symbol
           currency: TransactionCurrencies.NGNKOBO,
           expiresAt: details.BANKTRANSFER.expiresAt,
         }
       : undefined;
 
-  // Build lightning details if available (regardless of selected method)
   const lightningInvoiceDetails: LightningInvoiceDetails | undefined =
     details.LIGHTNING
       ? {
@@ -102,7 +97,11 @@ const transformApiData = (
           amount:
             details.LIGHTNING.amount /
             precisionByTransactionCurrency[TransactionCurrencies.BTCSAT],
-          targetAmount: details.LIGHTNING.targetAmount,
+          targetAmount:
+            details.settlementCurrency === SettlementCurrencies.BTC
+              ? details.LIGHTNING.targetAmount
+              : details.LIGHTNING.targetAmount /
+                precisionByTransactionCurrency[TransactionCurrencies.BTCSAT],
           currencySymbol: getCurrencySymbol(TransactionCurrencies.BTCSAT),
           currency: details.settlementCurrency,
           satsAmount: details.LIGHTNING.amount,
@@ -111,7 +110,6 @@ const transformApiData = (
         }
       : undefined;
 
-  // Determine amount and expiry based on selected method
   const amount =
     selectedMethod.type === PaymentMethods.LIGHTNING
       ? details.LIGHTNING?.amount || 0
@@ -160,7 +158,6 @@ export async function GET(request: NextRequest) {
     }
 
     if (paymentMethod) {
-      // ensure the payment method is valid
       if (
         !Object.values(PaymentMethods).includes(
           paymentMethod.toUpperCase() as PaymentMethodType
@@ -179,7 +176,6 @@ export async function GET(request: NextRequest) {
     }
 
     if (refreshPayment) {
-      // check if it a boolean
       if (refreshPayment !== "true" && refreshPayment !== "false") {
         return NextResponse.json(
           {

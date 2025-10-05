@@ -4,6 +4,7 @@ import {
   PaymentMethods,
   PaymentTypes,
   TransactionCurrencies,
+  SettlementCurrencies,
 } from "./primitives";
 
 export interface PaymentMethod {
@@ -13,7 +14,6 @@ export interface PaymentMethod {
   icon?: string;
 }
 
-// Real API Response structure
 export interface ApiPaymentLinkDetails {
   id: string;
   name: string;
@@ -21,7 +21,7 @@ export interface ApiPaymentLinkDetails {
   callbackUrl: string;
   paymentLinkOrderId: string;
   paymentMethods: string[];
-  settlementCurrency: TransactionCurrency;
+  settlementCurrency: SettlementCurrency;
   account: {
     name: string;
     logo: string;
@@ -54,7 +54,6 @@ export interface BankTransferDetails {
   currencySymbol: string;
   currency: string;
   expiresAt: string;
-  // Keep these for internal use but don't display in UI
   accountName?: string;
   orderId?: string;
 }
@@ -76,7 +75,7 @@ export interface PaymentData {
   merchantLogo: string;
   description: string;
   amount: number;
-  settlementCurrency: TransactionCurrency;
+  settlementCurrency: SettlementCurrency;
   expiresAt: string;
   paymentMethods: PaymentMethod[];
   selectedMethod?: PaymentMethod;
@@ -99,6 +98,9 @@ export type PaymentMethodType =
 
 export type TransactionCurrency =
   (typeof TransactionCurrencies)[keyof typeof TransactionCurrencies];
+
+export type SettlementCurrency =
+  (typeof SettlementCurrencies)[keyof typeof SettlementCurrencies];
 
 export type PaymentType = (typeof PaymentTypes)[keyof typeof PaymentTypes];
 

@@ -9,16 +9,29 @@ import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
-import { calculateTimeLeft, copyToClipboard, formatAmount } from "@/lib";
+import {
+  calculateTimeLeft,
+  copyToClipboard,
+  formatAmount,
+  formatRate,
+  getCurrencySymbol,
+} from "@/lib";
 import {
   BankTransferDetails,
   LightningInvoiceDetails,
   PaymentData,
   PaymentType,
 } from "@/types/payment";
-import { PaymentTypes } from "@/types/primitives";
+import {
+  PaymentTypes,
+  precisionByTransactionCurrency,
+  SettlementCurrencies,
+  SettlementCurrencyTransactionCurrencies,
+  TransactionCurrencies,
+} from "@/types/primitives";
 
 import { Spinner } from "./Spinner";
+import { ZAR_INSTANT_PAYOUT_FEE } from "@/config/process";
 
 interface PaymentDetailsProps {
   details: PaymentData;
@@ -52,15 +65,23 @@ export function PaymentDetails({
             label: "BANK NAME",
             value: bankDetails.bankName,
             copyable: false,
+            hide: false,
+          },
+          {
+            label: "ACCOUNT NAME",
+            value: bankDetails.accountName,
+            copyable: false,
+            hide: false,
           },
           {
             label: "ACCOUNT NUMBER",
             value: bankDetails.accountNumber,
             copyable: true,
             copyKey: "account number",
+            hide: false,
           },
           {
-            label: "AMOUNT",
+            label: "YOU SEND",
             value: formatAmount(
               bankDetails.amount,
               bankDetails.currency,
@@ -69,6 +90,57 @@ export function PaymentDetails({
             copyable: true,
             copyKey: "amount",
             copyValue: bankDetails?.amount?.toString(),
+            hide: false,
+          },
+          {
+            label: "RECIPIENT RECEIVES",
+            value: formatAmount(
+              details.settlementCurrency === SettlementCurrencies.BTC
+                ? bankDetails.targetAmount /
+                    precisionByTransactionCurrency[TransactionCurrencies.BTCSAT]
+                : bankDetails.targetAmount,
+              SettlementCurrencyTransactionCurrencies[
+                details.settlementCurrency
+              ],
+              getCurrencySymbol(
+                SettlementCurrencyTransactionCurrencies[
+                  details.settlementCurrency
+                ]
+              )
+            ),
+            hide: false,
+          },
+          {
+            label: "RATE",
+            value: formatRate({
+              sourceAmount: bankDetails.amount,
+              targetAmount: bankDetails.targetAmount,
+              settlementCurrency: details.settlementCurrency,
+              sourceSymbol: bankDetails.currencySymbol,
+              targetSymbol: getCurrencySymbol(
+                SettlementCurrencyTransactionCurrencies[
+                  details.settlementCurrency
+                ]
+              ),
+            }),
+            copyable: false,
+            hide: false,
+          },
+          {
+            label: "INSTANT PAYOUT FEE",
+            value: formatAmount(
+              ZAR_INSTANT_PAYOUT_FEE,
+              SettlementCurrencyTransactionCurrencies[
+                details.settlementCurrency
+              ],
+              getCurrencySymbol(
+                SettlementCurrencyTransactionCurrencies[
+                  details.settlementCurrency
+                ]
+              )
+            ),
+            copyable: false,
+            hide: details.settlementCurrency !== SettlementCurrencies.ZAR,
           },
         ]
       : [];
@@ -244,8 +316,10 @@ export function PaymentDetails({
             details.bankTransferDetails?.currency || "",
             details.bankTransferDetails?.currencySymbol || ""
           )}{" "}
-          ({(details.bankTransferDetails?.targetAmount || 0).toLocaleString()}{" "}
-          SATS)
+          {details.settlementCurrency === SettlementCurrencies.BTC &&
+            `(${(
+              details.bankTransferDetails?.targetAmount || 0
+            ).toLocaleString()} SATS)`}
         </span>
       </>
     );
@@ -259,9 +333,9 @@ export function PaymentDetails({
       : "This account is for this transaction only and expires in";
 
     return (
-      <div className="text-grey-text-primary text-xs md:text-sm">
+      <div className="text-grey-text-primary text-xs md:text-sm text-center">
         {baseText}{" "}
-        <span className="font-semibold text-green-600">
+        <span className="text-lg font-semibold text-green-600">
           {isLoading ? "..." : timeLeft}
         </span>
       </div>
@@ -322,8 +396,8 @@ export function PaymentDetails({
   const BankTransferContent = () => (
     <div className={`space-y-4 px-6 ${isPaymentExpired ? "blur-sm" : ""}`}>
       {PAYMENT_DETAILS_OPTIONS.map((field) => (
-        <div key={field.label}>
-          <label className="block text-sm font-normal tracking-wider text-black-text mb-2">
+        <div key={field.label} className={field.hide ? "hidden" : ""}>
+          <label className="block text-sm font-normal tracking-wider text-black-text">
             {field.label}
           </label>
           <div className="flex items-center justify-between py-1.5">
@@ -336,7 +410,7 @@ export function PaymentDetails({
                 size="sm"
                 onClick={() =>
                   handleCopyToClipboard({
-                    value: field.copyValue || field.value,
+                    value: field.copyValue || field.value || "",
                     copyKey: field.copyKey || field.label,
                   })
                 }
