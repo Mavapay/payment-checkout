@@ -17,13 +17,34 @@ import {
   PaymentMethods,
   precisionByTransactionCurrency,
   SettlementCurrencies,
+  SettlementCurrencyTransactionCurrencies,
   TransactionCurrencies,
 } from "@/types/primitives";
+
+const toDisplayTargetAmount = (
+  rawTargetAmount: number,
+  settlementCurrency: string,
+) => {
+  if (settlementCurrency === SettlementCurrencies.BTC) {
+    return rawTargetAmount;
+  }
+
+  const transactionCurrency =
+    SettlementCurrencyTransactionCurrencies[
+      settlementCurrency as keyof typeof SettlementCurrencyTransactionCurrencies
+    ];
+
+  if (!transactionCurrency) {
+    return rawTargetAmount;
+  }
+
+  return rawTargetAmount / precisionByTransactionCurrency[transactionCurrency];
+};
 
 const transformApiData = (
   apiData: ApiPaymentData,
   requestedPaymentMethod?: PaymentMethodType,
-  merchantLogo?: string
+  merchantLogo?: string,
 ): PaymentData => {
   const details = apiData.paymentLinkDetails;
 
@@ -47,15 +68,15 @@ const transformApiData = (
 
   const getDefaultMethod = () => {
     const lightningMethod = availablePaymentMethods.find(
-      (m) => m.type === PaymentMethods.LIGHTNING
+      (m) => m.type === PaymentMethods.LIGHTNING,
     );
     const bankTransferMethod = availablePaymentMethods.find(
-      (m) => m.type === PaymentMethods.BANKTRANSFER
+      (m) => m.type === PaymentMethods.BANKTRANSFER,
     );
 
     if (requestedPaymentMethod) {
       const method = availablePaymentMethods.find(
-        (m) => m.type === requestedPaymentMethod
+        (m) => m.type === requestedPaymentMethod,
       );
       return method!;
     }
@@ -79,11 +100,10 @@ const transformApiData = (
           amount:
             details.BANKTRANSFER.amount /
             precisionByTransactionCurrency[TransactionCurrencies.NGNKOBO],
-          targetAmount:
-            details.settlementCurrency === SettlementCurrencies.BTC
-              ? details.BANKTRANSFER.targetAmount
-              : details.BANKTRANSFER.targetAmount /
-                precisionByTransactionCurrency[TransactionCurrencies.NGNKOBO],
+          targetAmount: toDisplayTargetAmount(
+            details.BANKTRANSFER.targetAmount,
+            details.settlementCurrency,
+          ),
           currencySymbol: getCurrencySymbol(TransactionCurrencies.NGNKOBO), // NGN symbol TODO: use currency from the API to determine the currency symbol
           currency: TransactionCurrencies.NGNKOBO,
           expiresAt: details.BANKTRANSFER.expiresAt,
@@ -97,11 +117,10 @@ const transformApiData = (
           amount:
             details.LIGHTNING.amount /
             precisionByTransactionCurrency[TransactionCurrencies.BTCSAT],
-          targetAmount:
-            details.settlementCurrency === SettlementCurrencies.BTC
-              ? details.LIGHTNING.targetAmount
-              : details.LIGHTNING.targetAmount /
-                precisionByTransactionCurrency[TransactionCurrencies.BTCSAT],
+          targetAmount: toDisplayTargetAmount(
+            details.LIGHTNING.targetAmount,
+            details.settlementCurrency,
+          ),
           currencySymbol: getCurrencySymbol(TransactionCurrencies.BTCSAT),
           currency: details.settlementCurrency,
           satsAmount: details.LIGHTNING.amount,
@@ -153,24 +172,24 @@ export async function GET(request: NextRequest) {
           status: "error",
           message: "Payment ID is required",
         },
-        { status: 400 }
+        { status: 400 },
       );
     }
 
     if (paymentMethod) {
       if (
         !Object.values(PaymentMethods).includes(
-          paymentMethod.toUpperCase() as PaymentMethodType
+          paymentMethod.toUpperCase() as PaymentMethodType,
         )
       ) {
         return NextResponse.json(
           {
             status: "error",
             message: `Invalid payment method. Please use ${Object.values(
-              PaymentMethods
+              PaymentMethods,
             ).join(", ")}`,
           },
-          { status: 400 }
+          { status: 400 },
         );
       }
     }
@@ -182,7 +201,7 @@ export async function GET(request: NextRequest) {
             status: "error",
             message: "Refresh payment must be a boolean",
           },
-          { status: 400 }
+          { status: 400 },
         );
       }
     }
@@ -200,7 +219,7 @@ export async function GET(request: NextRequest) {
           headers: {
             "Content-Type": "application/json",
           },
-        }
+        },
       );
     } else {
       response = await axios.get<ApiResponse<ApiPaymentData>>(
@@ -209,7 +228,7 @@ export async function GET(request: NextRequest) {
           headers: {
             "Content-Type": "application/json",
           },
-        }
+        },
       );
     }
 
@@ -218,7 +237,7 @@ export async function GET(request: NextRequest) {
     if (apiResponse.status === "ok" && response.status === 200) {
       const transformedData = transformApiData(
         apiResponse.data,
-        paymentMethod?.toUpperCase() as PaymentMethodType
+        paymentMethod?.toUpperCase() as PaymentMethodType,
       );
       return NextResponse.json({
         status: "ok",
@@ -239,7 +258,7 @@ export async function GET(request: NextRequest) {
           status: "error",
           message,
         },
-        { status: error.response?.status || 500 }
+        { status: error.response?.status || 500 },
       );
     }
 
@@ -251,7 +270,7 @@ export async function GET(request: NextRequest) {
             ? error.message
             : "Failed to fetch payment data",
       },
-      { status: 500 }
+      { status: 500 },
     );
   }
 }

@@ -8,7 +8,7 @@ import {
 
 export const formatAmountToHighestDenomination = (
   amount: number,
-  currency: TransactionCurrency
+  currency: TransactionCurrency,
 ) => {
   const precisionUnit = precisionByTransactionCurrency[currency];
   return amount / precisionUnit;
@@ -35,11 +35,12 @@ export const getPaymentMethodName = (method: string): string => {
 export const formatAmount = (
   amount: number,
   currency: string,
-  symbol: string
+  symbol: string,
 ) => {
   if (
     currency === TransactionCurrencies.NGNKOBO ||
-    currency === TransactionCurrencies.ZARCENT
+    currency === TransactionCurrencies.ZARCENT ||
+    currency === TransactionCurrencies.USDCENT
   ) {
     return `${symbol} ${amount.toLocaleString()}`;
   }
@@ -62,7 +63,7 @@ export const formatRate = ({
   switch (settlementCurrency) {
     case SettlementCurrencies.NGN: {
       const formattedAmount = convertToTwoDecimalPlaces(
-        sourceAmount / targetAmount
+        sourceAmount / targetAmount,
       );
       return `${sourceSymbol} 1 = ${targetSymbol} ${formattedAmount}`;
     }
@@ -70,7 +71,7 @@ export const formatRate = ({
       // We need to add the instant payout fee to the target amount to get the real rate
       const targetAmountWithInstantFee = targetAmount + ZAR_INSTANT_PAYOUT_FEE;
       const formattedAmount = convertToTwoDecimalPlaces(
-        sourceAmount / targetAmountWithInstantFee
+        sourceAmount / targetAmountWithInstantFee,
       );
       return `${targetSymbol} 1 = ${sourceSymbol} ${formattedAmount}`;
     }
@@ -79,13 +80,13 @@ export const formatRate = ({
         targetAmount /
         precisionByTransactionCurrency[TransactionCurrencies.BTCSAT];
       const formattedAmount = convertToTwoDecimalPlaces(
-        sourceAmount / convertedTargetAmount
+        sourceAmount / convertedTargetAmount,
       );
       return `${targetSymbol} 1 = ${sourceSymbol} ${formattedAmount}`;
     }
     default:
       const formattedAmount = convertToTwoDecimalPlaces(
-        sourceAmount / targetAmount
+        sourceAmount / targetAmount,
       );
       return `${sourceSymbol} 1 = ${targetSymbol} ${formattedAmount}`;
   }

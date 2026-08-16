@@ -7,24 +7,28 @@ export const TransactionCurrencies = {
   NGNKOBO: "NGNKOBO",
   BTCSAT: "BTCSAT",
   ZARCENT: "ZARCENT",
+  USDCENT: "USDCENT",
 } as const;
 
 export const SettlementCurrencies = {
   NGN: "NGN",
   ZAR: "ZAR",
   BTC: "BTC",
+  USD: "USD",
 } as const;
 
 export const SettlementCurrencyTransactionCurrencies = {
   [SettlementCurrencies.NGN]: TransactionCurrencies.NGNKOBO,
   [SettlementCurrencies.ZAR]: TransactionCurrencies.ZARCENT,
   [SettlementCurrencies.BTC]: TransactionCurrencies.BTCSAT,
+  [SettlementCurrencies.USD]: TransactionCurrencies.USDCENT,
 } as const;
 
 export const precisionByTransactionCurrency = {
   [TransactionCurrencies.NGNKOBO]: 1e2,
   [TransactionCurrencies.BTCSAT]: 1e8,
   [TransactionCurrencies.ZARCENT]: 1e2,
+  [TransactionCurrencies.USDCENT]: 1e2,
 } as const;
 
 export const PaymentTypes = {
