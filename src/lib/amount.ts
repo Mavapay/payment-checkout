@@ -27,7 +27,7 @@ export const getCurrencySymbol = (currency: string): string => {
     KES: "KSh",
     KESCENT: "KSh",
     USDT: "USDT",
-    USDTUNIT: "USDT",
+    USDTCENT: "USDT",
   };
   return currencyMap[currency] || currency;
 };
@@ -51,7 +51,7 @@ export const formatAmount = (
     currency === TransactionCurrencies.ZARCENT ||
     currency === TransactionCurrencies.USDCENT ||
     currency === TransactionCurrencies.KESCENT ||
-    currency === TransactionCurrencies.USDTUNIT
+    currency === TransactionCurrencies.USDTCENT
   ) {
     return `${symbol} ${amount.toLocaleString()}`;
   }
@@ -65,8 +65,8 @@ const minorUnitsByCurrency: Record<string, number> = {
   KESCENT: precisionByTransactionCurrency[TransactionCurrencies.KESCENT],
   BTC: precisionByTransactionCurrency[TransactionCurrencies.BTCSAT],
   BTCSAT: precisionByTransactionCurrency[TransactionCurrencies.BTCSAT],
-  USDT: precisionByTransactionCurrency[TransactionCurrencies.USDTUNIT],
-  USDTUNIT: precisionByTransactionCurrency[TransactionCurrencies.USDTUNIT],
+  USDT: precisionByTransactionCurrency[TransactionCurrencies.USDTCENT],
+  USDTCENT: precisionByTransactionCurrency[TransactionCurrencies.USDTCENT],
   USD: precisionByTransactionCurrency[TransactionCurrencies.USDCENT],
   USDCENT: precisionByTransactionCurrency[TransactionCurrencies.USDCENT],
   ZAR: precisionByTransactionCurrency[TransactionCurrencies.ZARCENT],
