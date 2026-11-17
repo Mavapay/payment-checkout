@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 
 import { Card } from "@/components/ui/card";
 import {
@@ -15,6 +15,8 @@ import {
   PaymentTypes,
 } from "@/types/primitives";
 
+import { useMobileMoneyCheckout } from "@/hooks/useMobileMoneyCheckout";
+
 import {
   PaymentActions,
   PaymentDetails,
@@ -23,6 +25,7 @@ import {
   PaymentMethods as PaymentMethodsComponent,
   PaymentProcessing,
 } from "./";
+import { MobileMoneyCheckout } from "./MobileMoneyCheckout";
 import { Spinner } from "./Spinner";
 import { useRouter } from "next/navigation";
 import Image from "next/image";
@@ -112,6 +115,7 @@ interface PaymentContentSectionProps {
   onRefreshPayment: () => void;
   isPaymentExpired: boolean;
   setIsPaymentExpired: (isPaymentExpired: boolean) => void;
+  mobileCheckout: ReturnType<typeof useMobileMoneyCheckout>;
 }
 
 const PaymentContentSection = ({
@@ -126,6 +130,7 @@ const PaymentContentSection = ({
   onRefreshPayment,
   isPaymentExpired,
   setIsPaymentExpired,
+  mobileCheckout,
 }: PaymentContentSectionProps) => {
   if (!selectedMethod) {
     return <Spinner message="Loading payment details..." />;
@@ -134,8 +139,12 @@ const PaymentContentSection = ({
     if (selectedMethod?.type === PaymentMethods.BANKTRANSFER) {
       return PaymentTypes.BANKTRANSFER;
     }
+    if (selectedMethod?.type === PaymentMethods.MOBILEMONEY) {
+      return PaymentTypes.MOBILEMONEY;
+    }
     return PaymentTypes.LIGHTNING;
   };
+  const isMobileMoney = selectedMethod.type === PaymentMethods.MOBILEMONEY;
 
   return (
     <div className="max-w-4xl mx-auto p-2 md:p-10 mt-0">
@@ -149,7 +158,11 @@ const PaymentContentSection = ({
           />
         </div>
 
-        <div className="md:space-y-6 md:py-8 flex flex-col justify-center items-center w-full">
+        <div
+          className={`md:space-y-6 md:py-8 flex flex-col justify-center items-center w-full min-w-0 ${
+            isMobileMoney ? "px-4 pb-6 md:px-10 md:pb-8" : ""
+          }`}
+        >
           <p className="font-sans font-normal text-sm leading-6 tracking-normal py-2 md:px-0">
             {paymentData.description}
           </p>
@@ -158,6 +171,13 @@ const PaymentContentSection = ({
             <PaymentProcessing
               paymentData={paymentData}
               onShowAccountNumber={onShowAccountNumber}
+            />
+          ) : isMobileMoney ? (
+            <MobileMoneyCheckout
+              payment={paymentData}
+              checkout={mobileCheckout}
+              onCancel={onCancel}
+              onPaymentConfirmed={onPaymentConfirmed}
             />
           ) : (
             <>
@@ -196,24 +216,58 @@ export function CheckoutPage({ paymentId }: CheckoutPageProps) {
   const [isPaymentExpired, setIsPaymentExpired] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const router = useRouter();
+  const pollOrderIdRef = useRef("");
+  const settledRef = useRef(false);
+  const pollGenerationRef = useRef(0);
+
+  const mobileCheckout = useMobileMoneyCheckout({
+    payment: paymentData,
+    enabled:
+      selectedMethod?.type === PaymentMethods.MOBILEMONEY &&
+      !isProcessing &&
+      !isLoading,
+    onPaymentChange: (next) => {
+      pollOrderIdRef.current = next.orderId;
+      setPaymentData(next);
+    },
+    onSettled: (next) => {
+      settledRef.current = true;
+      pollOrderIdRef.current = next.orderId;
+      setPaymentData(next);
+      setIsProcessing(true);
+    },
+  });
 
   useEffect(() => {
     const loadPaymentData = async () => {
       try {
         setIsLoading(true);
-        const response = await fetchPaymentData(paymentId);
+        let response = await fetchPaymentData(paymentId);
+        if (
+          response.status === "ok" &&
+          response.data.selectedMethod?.type === PaymentMethods.MOBILEMONEY
+        ) {
+          const scoped = await fetchPaymentData(
+            paymentId,
+            PaymentMethods.MOBILEMONEY,
+          );
+          if (scoped.status === "ok") {
+            response = scoped;
+          }
+        }
 
         if (response.status === "ok") {
+          pollOrderIdRef.current = response.data.orderId;
           setPaymentData(response.data);
           setSelectedMethod(
-            response.data.selectedMethod || response.data.paymentMethods[0]
+            response.data.selectedMethod || response.data.paymentMethods[0],
           );
         } else {
           setError(response.message || "Failed to load payment data");
         }
-      } catch (err) {
+      } catch {
         setError("An unexpected error occurred");
-        console.error("Error loading payment data:", err);
+        console.error("Error loading payment data");
       } finally {
         setIsLoading(false);
       }
@@ -225,26 +279,65 @@ export function CheckoutPage({ paymentId }: CheckoutPageProps) {
   }, [paymentId]);
 
   useEffect(() => {
-    if (!paymentData || isProcessing || isPaymentExpired) return;
+    if (!paymentData || isProcessing || isPaymentExpired || isLoading) return;
+    if (!paymentData.orderId) return;
+    if (selectedMethod?.type === PaymentMethods.MOBILEMONEY) return;
+
+    const orderId = paymentData.orderId;
+    const generation = ++pollGenerationRef.current;
+    let cancelled = false;
+    let inFlight = false;
+    const controller = new AbortController();
 
     const autoProcessInterval = setInterval(() => {
       const checkPaymentStatus = async () => {
-        const response = await fetchPaymentStatus(paymentData.orderId);
-        if (
-          response.status === "ok" &&
-          response.data.status === ApiPaymentStatus.SETTLED
-        ) {
-          setIsProcessing(true);
-          clearInterval(autoProcessInterval);
+        if (cancelled || inFlight || settledRef.current) return;
+        if (pollOrderIdRef.current !== orderId) return;
+        inFlight = true;
+        try {
+          const response = await fetchPaymentStatus(orderId, controller.signal);
+          if (
+            cancelled ||
+            response.cancelled ||
+            settledRef.current ||
+            pollOrderIdRef.current !== orderId ||
+            generation !== pollGenerationRef.current
+          ) {
+            return;
+          }
+          if (
+            response.status === "ok" &&
+            response.data.status === ApiPaymentStatus.SETTLED
+          ) {
+            settledRef.current = true;
+            setIsProcessing(true);
+            clearInterval(autoProcessInterval);
+          } else if (
+            response.status === "ok" &&
+            response.data.status === ApiPaymentStatus.EXPIRED
+          ) {
+            setIsPaymentExpired(true);
+          }
+        } finally {
+          inFlight = false;
         }
       };
-      checkPaymentStatus();
-    }, 5000); // 5 seconds
+      void checkPaymentStatus();
+    }, 5000);
 
     return () => {
+      cancelled = true;
       clearInterval(autoProcessInterval);
+      controller.abort();
     };
-  }, [paymentData, isProcessing, isPaymentExpired]);
+  }, [
+    paymentData,
+    paymentData?.orderId,
+    isProcessing,
+    isPaymentExpired,
+    isLoading,
+    selectedMethod?.type,
+  ]);
 
   const handleRefreshPayment = async () => {
     if (!paymentData) return;
@@ -258,11 +351,14 @@ export function CheckoutPage({ paymentId }: CheckoutPageProps) {
           PaymentMethods.LIGHTNING
       );
       if (response.status === "ok") {
+        pollGenerationRef.current += 1;
+        pollOrderIdRef.current = response.data.orderId;
+        settledRef.current = false;
         setPaymentData(response.data);
         setIsPaymentExpired(false);
       }
-    } catch (err) {
-      console.error("Error refreshing payment:", err);
+    } catch {
+      console.error("Error refreshing payment");
       setError("Failed to refresh payment");
     } finally {
       setIsLoading(false);
@@ -280,6 +376,9 @@ export function CheckoutPage({ paymentId }: CheckoutPageProps) {
       const response = await fetchPaymentData(paymentId, method.type);
 
       if (response.status === "ok") {
+        pollGenerationRef.current += 1;
+        pollOrderIdRef.current = response.data.orderId;
+        settledRef.current = false;
         setPaymentData(response.data);
         const newSelectedMethod =
           response.data.paymentMethods.find((m) => m.type === method.type) ||
@@ -338,6 +437,7 @@ export function CheckoutPage({ paymentId }: CheckoutPageProps) {
         onRefreshPayment={handleRefreshPayment}
         isPaymentExpired={isPaymentExpired}
         setIsPaymentExpired={setIsPaymentExpired}
+        mobileCheckout={mobileCheckout}
       />
 
       <PaymentFooter />

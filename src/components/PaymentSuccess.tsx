@@ -2,7 +2,7 @@
 
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
-import { formatAmount } from "@/lib/amount";
+import { formatAmount, formatMajorAmount } from "@/lib/amount";
 import { PaymentData } from "@/types/payment";
 import { Success } from "@/public/icons/success";
 import { PaymentMethods } from "@/types/primitives";
@@ -32,13 +32,18 @@ export function PaymentSuccess({
             <p className="text-sm md:text-base font-normal font-inter text-[#666666] px-2">
               Your payment of{" "}
               <span>
-                {selectedMethod?.type === PaymentMethods.BANKTRANSFER
-                  ? formatAmount(
-                      paymentData.bankTransferDetails?.amount || 0,
-                      paymentData.bankTransferDetails?.currency || "",
-                      paymentData.bankTransferDetails?.currencySymbol || ""
+                {selectedMethod?.type === PaymentMethods.MOBILEMONEY
+                  ? formatMajorAmount(
+                      paymentData.mobileMoneyDetails?.amount || paymentData.amount || 0,
+                      paymentData.mobileMoneyDetails?.sourceCurrency || "KES",
                     )
-                  : `${paymentData.lightningInvoiceDetails?.satsAmount.toLocaleString()} SATS`}
+                  : selectedMethod?.type === PaymentMethods.BANKTRANSFER
+                    ? formatAmount(
+                        paymentData.bankTransferDetails?.amount || 0,
+                        paymentData.bankTransferDetails?.currency || "",
+                        paymentData.bankTransferDetails?.currencySymbol || "",
+                      )
+                    : `${paymentData.lightningInvoiceDetails?.satsAmount.toLocaleString()} SATS`}
               </span>{" "}
               to {paymentData.merchantName} was successful!
             </p>

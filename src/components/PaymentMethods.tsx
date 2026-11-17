@@ -1,6 +1,6 @@
 "use client";
 
-import { X } from "lucide-react";
+import { Smartphone, X } from "lucide-react";
 import { useState } from "react";
 
 import { Card } from "@/components/ui/card";
@@ -45,6 +45,12 @@ const PAYMENT_METHOD_ICONS: Record<PaymentMethodType, IconConfig> = {
     padding: "p-1",
     size: "w-6 h-6",
     backgroundColor: "var(--color-gradient-orange)",
+  },
+  [PaymentMethodsEnum.MOBILEMONEY]: {
+    icon: Smartphone,
+    padding: "p-2",
+    size: "w-4 h-4",
+    backgroundColor: "#FFFFFF",
   },
 };
 
@@ -122,18 +128,8 @@ export function PaymentMethods({
             <AlertDialogContent className="max-w-sm mx-auto rounded-3xl p-0 border-none shadow-lg">
               <div className="bg-white rounded-3xl overflow-hidden">
                 <AlertDialogHeader className="p-6 pb-4 relative">
-                  <AlertDialogCancel
-                    asChild
-                    className="flex justify-end border-none outline-none shadow-none"
-                  >
-                    <div className="">
-                      <Button
-                        variant="ghost"
-                        className="h-auto w-auto hover:bg-gray-100 rounded-full border outline-none "
-                      >
-                        <X className="w-4 h-4" />
-                      </Button>
-                    </div>
+                  <AlertDialogCancel className="ml-auto size-8 min-w-8 max-w-8 shrink-0 self-end rounded-full border border-gray-200 bg-white p-0 shadow-none hover:bg-gray-100">
+                    <X className="size-4" />
                   </AlertDialogCancel>
                   <AlertDialogTitle className="text-base font-medium text-left">
                     Choose your preferred payment method
