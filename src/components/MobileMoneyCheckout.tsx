@@ -116,14 +116,6 @@ export function MobileMoneyCheckout({
                   </span>
                 </p>
               )}
-              {checkout.retryCountdownLabel && !checkout.quoteExpired && !checkout.canRequestAnother && (
-                <p className="text-grey-text-primary">
-                  You can request another prompt in{" "}
-                  <span className="font-semibold text-green-600">
-                    {checkout.retryCountdownLabel}
-                  </span>
-                </p>
-              )}
             </div>
           )}
 
@@ -240,7 +232,12 @@ export function MobileMoneyCheckout({
             disabled={!checkout.canRequestAnother || checkout.isSubmitting}
             className={`${actionButtonClassName} text-black-text border-grey-dark-bg`}
           >
-            Request another prompt
+            Resend Prompt
+            {checkout.retryCountdownLabel &&
+            !checkout.quoteExpired &&
+            !checkout.canRequestAnother
+              ? ` ${checkout.retryCountdownLabel}`
+              : ""}
           </Button>
         )}
         {showInstructions && checkout.quoteExpired && (

@@ -427,8 +427,8 @@ describe("payment link checkout", () => {
     );
 
     fireEvent.click(screen.getByRole("button", { name: "Send payment prompt" }));
-    expect(await screen.findByText(/0:00:0[45]/)).toBeTruthy();
-    const blocked = await screen.findByRole("button", { name: "Request another prompt" });
+    expect(await screen.findByRole("button", { name: /Resend Prompt 0:0[45]/ })).toBeTruthy();
+    const blocked = await screen.findByRole("button", { name: /Resend Prompt/ });
     expect(blocked).toHaveProperty("disabled", true);
     fireEvent.click(blocked);
     expect(createRequestId).toHaveBeenCalledTimes(1);
@@ -448,7 +448,7 @@ describe("payment link checkout", () => {
       },
     });
 
-    const allowed = await screen.findByRole("button", { name: "Request another prompt" });
+    const allowed = await screen.findByRole("button", { name: "Resend Prompt" });
     await waitFor(() => {
       expect(allowed).toHaveProperty("disabled", false);
     });
@@ -580,7 +580,7 @@ describe("payment link checkout", () => {
       },
     });
     fireEvent.click(screen.getByRole("button", { name: "Send payment prompt" }));
-    const button = await screen.findByRole("button", { name: "Request another prompt" });
+    const button = await screen.findByRole("button", { name: /Resend Prompt/ });
     await waitFor(() => {
       expect(button).toHaveProperty("disabled", true);
     });
@@ -734,7 +734,7 @@ describe("payment link checkout", () => {
     });
     fireEvent.click(screen.getByRole("button", { name: "Send payment prompt" }));
     expect(await screen.findByText(/confirming your payment/i)).toBeTruthy();
-    expect(screen.queryByRole("button", { name: "Request another prompt" })).toBeNull();
+    expect(screen.queryByRole("button", { name: /Resend Prompt/ })).toBeNull();
     expect(screen.queryByRole("button", { name: "Send payment prompt" })).toBeNull();
   });
 

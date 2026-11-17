@@ -10,7 +10,7 @@ export const TransactionCurrencies = {
   ZARCENT: "ZARCENT",
   USDCENT: "USDCENT",
   KESCENT: "KESCENT",
-  USDTUNIT: "USDTUNIT",
+  USDTCENT: "USDTCENT",
 } as const;
 
 export const SettlementCurrencies = {
@@ -35,7 +35,7 @@ export const SettlementCurrencyTransactionCurrencies = {
   [SettlementCurrencies.ZAR]: TransactionCurrencies.ZARCENT,
   [SettlementCurrencies.BTC]: TransactionCurrencies.BTCSAT,
   [SettlementCurrencies.USD]: TransactionCurrencies.USDCENT,
-  [SettlementCurrencies.USDT]: TransactionCurrencies.USDTUNIT,
+  [SettlementCurrencies.USDT]: TransactionCurrencies.USDTCENT,
 } as const;
 
 export const precisionByTransactionCurrency = {
@@ -44,7 +44,7 @@ export const precisionByTransactionCurrency = {
   [TransactionCurrencies.ZARCENT]: 1e2,
   [TransactionCurrencies.USDCENT]: 1e2,
   [TransactionCurrencies.KESCENT]: 1e2,
-  [TransactionCurrencies.USDTUNIT]: 1e2,
+  [TransactionCurrencies.USDTCENT]: 1e2,
 } as const;
 
 export const PaymentTypes = {

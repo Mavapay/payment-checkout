@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 
-import { formatCountdown, remainingMs, serverClockOffsetMs } from "@/lib/clock";
+import { formatCountdown, formatMinutesSeconds, remainingMs, serverClockOffsetMs } from "@/lib/clock";
 import {
   applyCheckoutFailure,
   applyCheckoutSuccess,
@@ -483,9 +483,10 @@ export function useMobileMoneyCheckout({
     canRequestAnother: canRequestAnotherPrompt(view, now),
     canContinue: canContinueAfterExpiry(view, now),
     canRetrySubmission: canRetryInterruptedSubmission(view),
-    retryCountdownLabel: view.retryAllowedAt
-      ? formatCountdown(retryRemaining)
-      : "",
+    retryCountdownLabel:
+      view.retryAllowedAt && retryRemaining > 0
+        ? formatMinutesSeconds(retryRemaining)
+        : "",
     quoteCountdownLabel:
       quoteRemaining !== undefined ? formatCountdown(quoteRemaining) : "",
     quoteExpired:
