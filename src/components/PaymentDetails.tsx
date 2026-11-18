@@ -326,7 +326,7 @@ export function PaymentDetails({
           {details.settlementCurrency === SettlementCurrencies.USDT &&
             `(${formatAmount(
               details.bankTransferDetails?.targetAmount || 0,
-              TransactionCurrencies.USDTUNIT,
+              TransactionCurrencies.USDTCENT,
               "USDT"
             )})`}
         </span>
