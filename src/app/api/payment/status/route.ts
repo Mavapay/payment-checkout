@@ -1,7 +1,8 @@
 import axios from "axios";
 import { NextRequest, NextResponse } from "next/server";
+
 import { getPaymentEndpoints } from "@/config/endpoints";
-import { ApiPaymentStatusType, ApiResponse } from "@/types/payment";
+import { normalizeStatusPayload } from "@/lib/collection";
 import { ApiPaymentStatus } from "@/types/primitives";
 
 export async function GET(request: NextRequest) {
@@ -15,7 +16,7 @@ export async function GET(request: NextRequest) {
           status: "error",
           message: "Order ID is required",
         },
-        { status: 400 }
+        { status: 400 },
       );
     }
 
@@ -23,40 +24,43 @@ export async function GET(request: NextRequest) {
       orderId,
     });
 
-    const response = await axios.get<ApiResponse<{ status: ApiPaymentStatusType }>>(
-      endpoints.getPaymentStatus,
-      {
-        headers: {
-          "Content-Type": "application/json",
-        },
-      }
-    );
+    const response = await axios.get(endpoints.getPaymentStatus, {
+      headers: {
+        "Content-Type": "application/json",
+      },
+    });
 
     const apiResponse = response.data;
+    const normalized = normalizeStatusPayload(apiResponse);
 
-    if (apiResponse.status === "success" || apiResponse.status === "ok") {
+    if (
+      (apiResponse.status === "success" || apiResponse.status === "ok") &&
+      normalized
+    ) {
       return NextResponse.json({
         status: "ok",
-        data: apiResponse.data as { status: ApiPaymentStatusType },
+        data: normalized,
       });
-    } else {
-      throw new Error(apiResponse.message || "API returned error status");
     }
+
+    throw new Error(apiResponse.message || "API returned error status");
   } catch (error) {
-    console.error("Error fetching payment status:", error);
+    console.error("Error fetching payment status");
 
     if (axios.isAxiosError(error)) {
-      const message =
-        error.response?.data?.message ||
-        error.message ||
-        "Failed to fetch payment status";
+      const data = error.response?.data;
+      const normalized = normalizeStatusPayload(data);
       return NextResponse.json(
         {
           status: "error",
-          message,
-          data: { status: ApiPaymentStatus.PENDING }, // Default to pending on error
+          message: data?.message || error.message || "Failed to fetch payment status",
+          code: data?.code,
+          data: normalized || {
+            status: ApiPaymentStatus.PENDING,
+            collection: undefined,
+          },
         },
-        { status: error.response?.status || 500 }
+        { status: error.response?.status || 500 },
       );
     }
 
@@ -67,9 +71,9 @@ export async function GET(request: NextRequest) {
           error instanceof Error
             ? error.message
             : "Failed to fetch payment status",
-        data: { status: ApiPaymentStatus.PENDING }, // Default to pending on error
+        data: { status: ApiPaymentStatus.PENDING },
       },
-      { status: 500 }
+      { status: 500 },
     );
   }
 }

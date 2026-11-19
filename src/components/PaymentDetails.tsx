@@ -112,19 +112,22 @@ export function PaymentDetails({
           },
           {
             label: "RATE",
-            value: formatRate({
-              sourceAmount: bankDetails.amount,
-              targetAmount: bankDetails.targetAmount,
-              settlementCurrency: details.settlementCurrency,
-              sourceSymbol: bankDetails.currencySymbol,
-              targetSymbol: getCurrencySymbol(
-                SettlementCurrencyTransactionCurrencies[
-                  details.settlementCurrency
-                ]
-              ),
-            }),
+            value:
+              details.settlementCurrency === SettlementCurrencies.USDT
+                ? ""
+                : formatRate({
+                    sourceAmount: bankDetails.amount,
+                    targetAmount: bankDetails.targetAmount,
+                    settlementCurrency: details.settlementCurrency,
+                    sourceSymbol: bankDetails.currencySymbol,
+                    targetSymbol: getCurrencySymbol(
+                      SettlementCurrencyTransactionCurrencies[
+                        details.settlementCurrency
+                      ]
+                    ),
+                  }),
             copyable: false,
-            hide: false,
+            hide: details.settlementCurrency === SettlementCurrencies.USDT,
           },
           {
             label: "INSTANT PAYOUT FEE",
@@ -320,6 +323,12 @@ export function PaymentDetails({
             `(${(
               details.bankTransferDetails?.targetAmount || 0
             ).toLocaleString()} SATS)`}
+          {details.settlementCurrency === SettlementCurrencies.USDT &&
+            `(${formatAmount(
+              details.bankTransferDetails?.targetAmount || 0,
+              TransactionCurrencies.USDTCENT,
+              "USDT"
+            )})`}
         </span>
       </>
     );

@@ -2,160 +2,35 @@ import axios, { AxiosResponse } from "axios";
 import { NextRequest, NextResponse } from "next/server";
 
 import { getPaymentEndpoints } from "@/config/endpoints";
-import { getCurrencySymbol } from "@/lib/amount";
+import { transformPaymentLink } from "@/lib/payment-link";
 import {
   ApiPaymentData,
   ApiResponse,
-  BankTransferDetails,
-  LightningInvoiceDetails,
   PaymentData,
-  PaymentMethod,
   PaymentMethodType,
 } from "@/types/payment";
-import {
-  ApiPaymentStatus,
-  PaymentMethods,
-  precisionByTransactionCurrency,
-  SettlementCurrencies,
-  SettlementCurrencyTransactionCurrencies,
-  TransactionCurrencies,
-} from "@/types/primitives";
+import { PaymentMethods } from "@/types/primitives";
 
-const toDisplayTargetAmount = (
-  rawTargetAmount: number,
-  settlementCurrency: string,
-) => {
-  if (settlementCurrency === SettlementCurrencies.BTC) {
-    return rawTargetAmount;
+const errorBody = (error: unknown, fallback: string) => {
+  if (axios.isAxiosError(error)) {
+    const data = error.response?.data;
+    return {
+      status: error.response?.status || 500,
+      body: {
+        status: "error" as const,
+        message: data?.message || error.message || fallback,
+        code: data?.code,
+        data: data?.data,
+      },
+    };
   }
-
-  const transactionCurrency =
-    SettlementCurrencyTransactionCurrencies[
-      settlementCurrency as keyof typeof SettlementCurrencyTransactionCurrencies
-    ];
-
-  if (!transactionCurrency) {
-    return rawTargetAmount;
-  }
-
-  return rawTargetAmount / precisionByTransactionCurrency[transactionCurrency];
-};
-
-const transformApiData = (
-  apiData: ApiPaymentData,
-  requestedPaymentMethod?: PaymentMethodType,
-  merchantLogo?: string,
-): PaymentData => {
-  const details = apiData.paymentLinkDetails;
-
-  const availablePaymentMethods: PaymentMethod[] = [];
-
-  if (details.paymentMethods.includes(PaymentMethods.BANKTRANSFER)) {
-    availablePaymentMethods.push({
-      id: "bank_transfer",
-      name: "Bank Transfer",
-      type: PaymentMethods.BANKTRANSFER,
-    });
-  }
-
-  if (details.paymentMethods.includes(PaymentMethods.LIGHTNING)) {
-    availablePaymentMethods.push({
-      id: "lightning_invoice",
-      name: "Lightning Invoice",
-      type: PaymentMethods.LIGHTNING,
-    });
-  }
-
-  const getDefaultMethod = () => {
-    const lightningMethod = availablePaymentMethods.find(
-      (m) => m.type === PaymentMethods.LIGHTNING,
-    );
-    const bankTransferMethod = availablePaymentMethods.find(
-      (m) => m.type === PaymentMethods.BANKTRANSFER,
-    );
-
-    if (requestedPaymentMethod) {
-      const method = availablePaymentMethods.find(
-        (m) => m.type === requestedPaymentMethod,
-      );
-      return method!;
-    }
-    if (details.LIGHTNING && lightningMethod) {
-      return lightningMethod!;
-    }
-    if (details.BANKTRANSFER && bankTransferMethod) {
-      return bankTransferMethod!;
-    }
-    return availablePaymentMethods[0];
-  };
-
-  const selectedMethod: PaymentMethod = getDefaultMethod();
-
-  const bankTransferDetails: BankTransferDetails | undefined =
-    details.BANKTRANSFER
-      ? {
-          bankName: details.BANKTRANSFER.ngnBankName,
-          accountNumber: details.BANKTRANSFER.ngnBankAccountNumber,
-          accountName: details.BANKTRANSFER.ngnAccountName,
-          amount:
-            details.BANKTRANSFER.amount /
-            precisionByTransactionCurrency[TransactionCurrencies.NGNKOBO],
-          targetAmount: toDisplayTargetAmount(
-            details.BANKTRANSFER.targetAmount,
-            details.settlementCurrency,
-          ),
-          currencySymbol: getCurrencySymbol(TransactionCurrencies.NGNKOBO), // NGN symbol TODO: use currency from the API to determine the currency symbol
-          currency: TransactionCurrencies.NGNKOBO,
-          expiresAt: details.BANKTRANSFER.expiresAt,
-        }
-      : undefined;
-
-  const lightningInvoiceDetails: LightningInvoiceDetails | undefined =
-    details.LIGHTNING
-      ? {
-          invoice: details.LIGHTNING.invoice,
-          amount:
-            details.LIGHTNING.amount /
-            precisionByTransactionCurrency[TransactionCurrencies.BTCSAT],
-          targetAmount: toDisplayTargetAmount(
-            details.LIGHTNING.targetAmount,
-            details.settlementCurrency,
-          ),
-          currencySymbol: getCurrencySymbol(TransactionCurrencies.BTCSAT),
-          currency: details.settlementCurrency,
-          satsAmount: details.LIGHTNING.amount,
-          expiresAt: details.LIGHTNING.expiresAt,
-          qrCodeData: details.LIGHTNING.invoice,
-        }
-      : undefined;
-
-  const amount =
-    selectedMethod.type === PaymentMethods.LIGHTNING
-      ? details.LIGHTNING?.amount || 0
-      : (details.BANKTRANSFER?.amount || 0) /
-        precisionByTransactionCurrency[TransactionCurrencies.NGNKOBO];
-
-  const expiresAt =
-    selectedMethod.type === PaymentMethods.LIGHTNING
-      ? details.LIGHTNING?.expiresAt || ""
-      : details.BANKTRANSFER?.expiresAt || "";
 
   return {
-    id: details.id,
-    merchantName: details.account.name,
-    merchantLogo: details.account.logo || merchantLogo || "",
-    description: details.description,
-    amount,
-    settlementCurrency: details.settlementCurrency,
-    expiresAt,
-    paymentMethods: availablePaymentMethods,
-    selectedMethod,
-    bankTransferDetails,
-    lightningInvoiceDetails,
-    paymentLinkId: details.paymentLinkOrderId,
-    status: ApiPaymentStatus.PENDING, // Always pending for new payments
-    orderId: details.paymentLinkOrderId,
-    callbackUrl: details.callbackUrl,
+    status: 500,
+    body: {
+      status: "error" as const,
+      message: error instanceof Error ? error.message : fallback,
+    },
   };
 };
 
@@ -235,7 +110,7 @@ export async function GET(request: NextRequest) {
     const apiResponse = response.data;
 
     if (apiResponse.status === "ok" && response.status === 200) {
-      const transformedData = transformApiData(
+      const transformedData: PaymentData = transformPaymentLink(
         apiResponse.data,
         paymentMethod?.toUpperCase() as PaymentMethodType,
       );
@@ -243,34 +118,12 @@ export async function GET(request: NextRequest) {
         status: "ok",
         data: transformedData,
       });
-    } else {
-      throw new Error(apiResponse.message || "API returned error status");
-    }
-  } catch (error) {
-    console.error("Error fetching payment data:", error);
-    if (axios.isAxiosError(error)) {
-      const message =
-        error.response?.data?.message ||
-        error.message ||
-        "Failed to fetch payment data";
-      return NextResponse.json(
-        {
-          status: "error",
-          message,
-        },
-        { status: error.response?.status || 500 },
-      );
     }
 
-    return NextResponse.json(
-      {
-        status: "error",
-        message:
-          error instanceof Error
-            ? error.message
-            : "Failed to fetch payment data",
-      },
-      { status: 500 },
-    );
+    throw new Error(apiResponse.message || "API returned error status");
+  } catch (error) {
+    console.error("Error fetching payment data");
+    const formatted = errorBody(error, "Failed to fetch payment data");
+    return NextResponse.json(formatted.body, { status: formatted.status });
   }
 }
