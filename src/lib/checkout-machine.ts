@@ -8,6 +8,7 @@ import {
 } from "@/types/payment";
 import {
   ApiPaymentStatus,
+  CheckoutErrorCodes,
   CheckoutPhases,
   PromptStatuses,
 } from "@/types/primitives";
@@ -31,6 +32,7 @@ export interface MobileMoneyView {
   paymentAlreadyReceived: boolean;
   orderFailed: boolean;
   canRetry: boolean;
+  collectionNotSubmitted: boolean;
   retryAllowedAt?: string;
   quoteExpiresAt?: string;
   serverTime?: string;
@@ -57,6 +59,7 @@ export const createMobileMoneyView = (): MobileMoneyView => ({
   paymentAlreadyReceived: false,
   orderFailed: false,
   canRetry: false,
+  collectionNotSubmitted: false,
   userMessage: null,
 });
 
@@ -117,6 +120,12 @@ export const canRequestAnotherPrompt = (
   if (isBlockingPromptStatus(view.promptStatus)) {
     return false;
   }
+  if (view.collectionNotSubmitted && !view.pollOrderId) {
+    if (sameInstant(view, clientNow).retryRemaining > 0) {
+      return false;
+    }
+    return Boolean(view.submission);
+  }
   if (!view.canRetry) {
     return false;
   }
@@ -152,26 +161,35 @@ export const canContinueAfterExpiry = (
   return Boolean(view.submission);
 };
 
-export const canRetryInterruptedSubmission = (view: MobileMoneyView): boolean => {
-  return (
-    view.phase === CheckoutPhases.NEEDS_RETRY &&
-    Boolean(view.submission) &&
-    !view.settled &&
-    !view.orderFailed
-  );
+export const canRetryInterruptedSubmission = (
+  view: MobileMoneyView,
+  clientNow: number,
+): boolean => {
+  if (
+    view.phase !== CheckoutPhases.NEEDS_RETRY ||
+    !view.submission ||
+    view.settled ||
+    view.orderFailed
+  ) {
+    return false;
+  }
+  return sameInstant(view, clientNow).retryRemaining <= 0;
 };
 
 const applyCollection = (
   view: MobileMoneyView,
   collection: CollectionMetadata | undefined,
   receivedAt: number,
+  authoritativeRetry = false,
 ): MobileMoneyView => {
   if (!collection) {
     return view;
   }
   return {
     ...view,
-    canRetry: collection.canRetry ?? view.canRetry,
+    canRetry: authoritativeRetry
+      ? collection.canRetry === true
+      : collection.canRetry ?? view.canRetry,
     retryAllowedAt: collection.retryAllowedAt ?? view.retryAllowedAt,
     quoteExpiresAt: collection.quoteExpiresAt ?? view.quoteExpiresAt,
     serverTime: collection.serverTime ?? view.serverTime,
@@ -197,6 +215,7 @@ export const beginSubmission = (
   ...view,
   phase: CheckoutPhases.SUBMITTING,
   submission,
+  collectionNotSubmitted: false,
   userMessage: null,
 });
 
@@ -219,6 +238,7 @@ export const applyCheckoutSuccess = (
     quoteExpired: false,
     paymentAlreadyReceived: paymentReceived,
     orderFailed: false,
+    collectionNotSubmitted: false,
     canRetry: details.canRetry ?? false,
     retryAllowedAt: details.retryAllowedAt,
     quoteExpiresAt: details.quoteExpiresAt || details.expiresAt,
@@ -295,14 +315,28 @@ export const applyCheckoutFailure = (
     };
   }
 
-  if (error.code === "PROMPT_RETRY_TOO_EARLY") {
+  if (error.code === CheckoutErrorCodes.COLLECTION_NOT_SUBMITTED) {
     return {
       ...withCollection,
       phase: CheckoutPhases.PENDING,
       pollOrderId: orderId,
       pollGeneration: generation,
       retryAllowedAt,
+      canRetry: error.collection?.canRetry === true,
+      collectionNotSubmitted: true,
+      userMessage: error.userMessage,
+    };
+  }
+
+  if (error.httpStatus === 429 || error.code === CheckoutErrorCodes.PROMPT_RETRY_TOO_EARLY) {
+    return {
+      ...withCollection,
+      phase: orderId ? CheckoutPhases.PENDING : CheckoutPhases.NEEDS_RETRY,
+      pollOrderId: orderId,
+      pollGeneration: generation,
+      retryAllowedAt,
       canRetry: false,
+      collectionNotSubmitted: false,
       userMessage: error.userMessage,
     };
   }
@@ -326,7 +360,10 @@ export const applyCheckoutFailure = (
       ...withCollection,
       phase: CheckoutPhases.NEEDS_RETRY,
       pollOrderId: orderId,
+      pollGeneration: generation,
       retryAllowedAt,
+      canRetry: false,
+      collectionNotSubmitted: false,
       userMessage: error.userMessage,
     };
   }
@@ -360,11 +397,13 @@ export const applyStatusUpdate = (
     return view;
   }
 
-  const withCollection = applyCollection(view, event.collection, receivedAt);
+  const withCollection = applyCollection(view, event.collection, receivedAt, true);
   const base: MobileMoneyView = {
     ...withCollection,
     appliedSeq: event.seq,
     pollOrderId: view.pollOrderId,
+    collectionNotSubmitted: false,
+    canRetry: event.collection?.canRetry === true,
   };
 
   if (event.status === ApiPaymentStatus.SETTLED) {

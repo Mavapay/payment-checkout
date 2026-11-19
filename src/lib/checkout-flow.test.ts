@@ -8,11 +8,13 @@ import {
   normalizeStatusPayload,
 } from "@/lib/collection";
 import {
+  applyCheckoutFailure,
   applyCheckoutSuccess,
   applyStatusUpdate,
   bankInstructionsFrom,
   beginSubmission,
   canRequestAnotherPrompt,
+  canRetryInterruptedSubmission,
   createMobileMoneyView,
   markQuoteExpired,
 } from "@/lib/checkout-machine";
@@ -382,6 +384,12 @@ describe("checkout attempts", () => {
 
     expect(
       canRequestAnotherPrompt(
+        { ...base, promptStatus: PromptStatuses.INITIATING },
+        now,
+      ),
+    ).toBe(false);
+    expect(
+      canRequestAnotherPrompt(
         { ...base, promptStatus: PromptStatuses.UNKNOWN },
         now,
       ),
@@ -408,6 +416,185 @@ describe("checkout attempts", () => {
         now,
       ),
     ).toBe(true);
+  });
+
+  it("enables another prompt only after the latest status says canRetry", () => {
+    const now = Date.parse("2026-01-01T00:00:30.000Z");
+    const view = submittedView(
+      checkoutDetails({
+        canRetry: true,
+        retryAllowedAt: "2026-01-01T00:00:00.000Z",
+        serverTime: "2026-01-01T00:00:00.000Z",
+      }),
+    );
+    const timedOut = applyStatusUpdate(
+      view,
+      {
+        generation: view.pollGeneration,
+        orderId: view.pollOrderId,
+        seq: 1,
+        status: ApiPaymentStatus.PENDING,
+        collection: { promptStatus: PromptStatuses.TIMED_OUT },
+      },
+      now,
+    );
+
+    expect(timedOut.canRetry).toBe(false);
+    expect(canRequestAnotherPrompt(timedOut, now)).toBe(false);
+
+    const allowed = applyStatusUpdate(
+      timedOut,
+      {
+        generation: timedOut.pollGeneration,
+        orderId: timedOut.pollOrderId,
+        seq: 2,
+        status: ApiPaymentStatus.PENDING,
+        collection: {
+          promptStatus: PromptStatuses.TIMED_OUT,
+          canRetry: true,
+        },
+      },
+      now,
+    );
+
+    expect(allowed.canRetry).toBe(true);
+    expect(canRequestAnotherPrompt(allowed, now)).toBe(true);
+  });
+
+  it("keeps a received payment pending while settlement is still pending", () => {
+    const now = Date.parse("2026-01-01T00:00:30.000Z");
+    const view = submittedView(checkoutDetails());
+    const received = applyStatusUpdate(
+      view,
+      {
+        generation: view.pollGeneration,
+        orderId: view.pollOrderId,
+        seq: 1,
+        status: ApiPaymentStatus.PENDING,
+        collection: {
+          promptStatus: PromptStatuses.SUCCEEDED,
+          paymentStatus: PromptStatuses.SUCCEEDED,
+          canRetry: false,
+        },
+      },
+      now,
+    );
+
+    expect(received.phase).toBe(CheckoutPhases.RECEIVED);
+    expect(received.settled).toBe(false);
+    expect(received.orderFailed).toBe(false);
+    expect(canRequestAnotherPrompt(received, now)).toBe(false);
+  });
+
+  it("retries the same request after lock contention and rate limits", () => {
+    const now = Date.parse("2026-01-01T00:00:00.000Z");
+    const view = submittedView(
+      checkoutDetails({
+        requestId: "req-1",
+        retryAllowedAt: "2026-01-01T00:00:00.000Z",
+      }),
+    );
+    const locked = normalizeCheckoutError({ message: "locked" }, 409, "5");
+
+    expect(locked.reuseRequest).toBe(true);
+    expect(locked.autoRetry).toBe(false);
+    expect(locked.userMessage).toMatch(/same submission/i);
+
+    const waiting = applyCheckoutFailure(view, locked, now);
+    expect(waiting.phase).toBe(CheckoutPhases.NEEDS_RETRY);
+    expect(waiting.submission?.requestId).toBe("req-1");
+    expect(waiting.canRetry).toBe(false);
+    expect(canRetryInterruptedSubmission(waiting, now)).toBe(false);
+    expect(canRetryInterruptedSubmission(waiting, now + 5_000)).toBe(true);
+    expect(canRequestAnotherPrompt(waiting, now + 5_000)).toBe(false);
+
+    const limited = normalizeCheckoutError(
+      { message: "slow down", data: { retryAllowedAt: "2026-01-01T00:00:15.000Z" } },
+      429,
+      "10",
+    );
+    expect(limited.reuseRequest).toBe(false);
+    expect(limited.autoRetry).toBe(false);
+    expect(limited.retryAfterSeconds).toBe(10);
+    expect(limited.collection?.retryAllowedAt).toBe("2026-01-01T00:00:15.000Z");
+
+    const rateLimited = applyCheckoutFailure(view, limited, now);
+    expect(rateLimited.canRetry).toBe(false);
+    expect(rateLimited.pollOrderId).toBe("plo-1");
+    expect(rateLimited.phase).toBe(CheckoutPhases.PENDING);
+    expect(rateLimited.submission?.requestId).toBe("req-1");
+    expect(canRequestAnotherPrompt(rateLimited, now + 20_000)).toBe(false);
+  });
+
+  it("keeps an unexpected failure on the same request and accepted order", () => {
+    const now = Date.parse("2026-01-01T00:00:00.000Z");
+    const view = submittedView(checkoutDetails({ requestId: "req-1" }));
+    const error = normalizeCheckoutError(
+      {
+        message: "unexpected",
+        data: { paymentLinkOrderId: "plo-accepted" },
+      },
+      500,
+    );
+
+    expect(error.reuseRequest).toBe(true);
+    expect(error.autoRetry).toBe(false);
+    expect(error.paymentLinkOrderId).toBe("plo-accepted");
+    expect(error.userMessage).toMatch(/attempt was kept/i);
+
+    const failed = applyCheckoutFailure(view, error, now);
+    expect(failed.phase).toBe(CheckoutPhases.NEEDS_RETRY);
+    expect(failed.orderFailed).toBe(false);
+    expect(failed.pollOrderId).toBe("plo-accepted");
+    expect(failed.submission?.requestId).toBe("req-1");
+    expect(canRequestAnotherPrompt(failed, now)).toBe(false);
+  });
+
+  it("allows a new request only after a prompt that was not submitted may be retried", () => {
+    const now = Date.parse("2026-01-01T00:00:00.000Z");
+    const started = beginSubmission(createMobileMoneyView(), {
+      requestId: "req-old",
+      paymentSource: payer,
+    });
+    const error = normalizeCheckoutError(
+      {
+        code: "COLLECTION_NOT_SUBMITTED",
+        data: {
+          canRetry: false,
+          retryAllowedAt: "2026-01-01T00:00:20.000Z",
+        },
+      },
+      409,
+    );
+
+    expect(error.reuseRequest).toBe(false);
+    expect(error.autoRetry).toBe(false);
+    expect(error.userMessage).toMatch(/not sent/i);
+
+    const next = applyCheckoutFailure(started, error, now);
+    expect(next.collectionNotSubmitted).toBe(true);
+    expect(next.submission?.requestId).toBe("req-old");
+    expect(next.phase).not.toBe(CheckoutPhases.NEEDS_RETRY);
+    expect(canRequestAnotherPrompt(next, now)).toBe(false);
+    expect(canRequestAnotherPrompt(next, now + 20_000)).toBe(true);
+
+    const withOrder = applyCheckoutFailure(
+      started,
+      normalizeCheckoutError(
+        {
+          code: "COLLECTION_NOT_SUBMITTED",
+          data: {
+            paymentLinkOrderId: "plo-1",
+            canRetry: true,
+            retryAllowedAt: "2026-01-01T00:00:00.000Z",
+          },
+        },
+        409,
+      ),
+      now,
+    );
+    expect(withOrder.pollOrderId).toBe("plo-1");
+    expect(canRequestAnotherPrompt(withOrder, now)).toBe(true);
   });
 
   it("uses the server clock when measuring the retry countdown", () => {
@@ -444,6 +631,8 @@ describe("checkout attempts", () => {
       },
       409,
     );
+    expect(nested.reuseRequest).toBe(false);
+    expect(nested.autoRetry).toBe(false);
     expect(nested.resumePolling).toBe(true);
     expect(nested.paymentLinkOrderId).toBe("plo-accepted");
     expect(nested.collection?.internalOrderId).toBe("internal-order");

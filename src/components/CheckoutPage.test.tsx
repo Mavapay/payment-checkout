@@ -347,6 +347,7 @@ describe("payment link checkout", () => {
       error: {
         network: true,
         reuseRequest: true,
+        autoRetry: true,
         userMessage:
           "The connection was interrupted. The original attempt was kept so a duplicate prompt is not sent. Retry the submission.",
         message: "",

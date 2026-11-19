@@ -123,11 +123,7 @@ export function useMobileMoneyCheckout({
         orderId,
         abortRef.current?.signal,
       );
-      if (
-        !enabledRef.current ||
-        response.cancelled ||
-        response.status !== "ok"
-      ) {
+      if (!enabledRef.current || response.cancelled || response.status !== "ok") {
         return;
       }
       const receivedAt = Date.now();
@@ -163,7 +159,7 @@ export function useMobileMoneyCheckout({
         }
       }
     } catch {
-      // A failed status check does not create another payment attempt.
+      // A failed status check keeps the current attempt and does not mark the payment failed.
     } finally {
       lockRef.current = false;
       if (queuedRef.current) {
@@ -224,6 +220,7 @@ export function useMobileMoneyCheckout({
         internalOrderId: record.internalOrderId,
         quoteExpired: record.phase === CheckoutPhases.QUOTE_EXPIRED,
         orderFailed: record.phase === CheckoutPhases.FAILED,
+        collectionNotSubmitted: record.collectionNotSubmitted ?? false,
         userMessage: null,
       };
       if (cancelled) {
@@ -320,7 +317,7 @@ export function useMobileMoneyCheckout({
       paymentSource: submission.paymentSource,
       settlementCurrency,
     });
-    if (!result.ok && result.error.reuseRequest) {
+    if (!result.ok && result.error.autoRetry) {
       result = await submitPaymentLinkCheckout({
         paymentLinkId,
         requestId: submission.requestId,
@@ -378,12 +375,20 @@ export function useMobileMoneyCheckout({
     if (!gateRef.current.tryEnter()) {
       return;
     }
+    if (viewRef.current.collectionNotSubmitted) {
+      gateRef.current.leave();
+      requestAnotherPrompt();
+      return;
+    }
     if (
       viewRef.current.submission &&
       (viewRef.current.phase === CheckoutPhases.NEEDS_RETRY ||
         viewRef.current.phase === CheckoutPhases.REQUEST_ID_REUSED)
     ) {
-      if (viewRef.current.phase === CheckoutPhases.REQUEST_ID_REUSED) {
+      if (
+        viewRef.current.phase === CheckoutPhases.REQUEST_ID_REUSED ||
+        !canRetryInterruptedSubmission(viewRef.current, Date.now())
+      ) {
         gateRef.current.leave();
         return;
       }
@@ -406,7 +411,7 @@ export function useMobileMoneyCheckout({
   };
 
   const retry = () => {
-    if (!canRetryInterruptedSubmission(viewRef.current)) {
+    if (!canRetryInterruptedSubmission(viewRef.current, Date.now())) {
       return;
     }
     if (!gateRef.current.tryEnter()) {
@@ -482,7 +487,7 @@ export function useMobileMoneyCheckout({
     isSubmitting: view.phase === CheckoutPhases.SUBMITTING,
     canRequestAnother: canRequestAnotherPrompt(view, now),
     canContinue: canContinueAfterExpiry(view, now),
-    canRetrySubmission: canRetryInterruptedSubmission(view),
+    canRetrySubmission: canRetryInterruptedSubmission(view, now),
     retryCountdownLabel:
       view.retryAllowedAt && retryRemaining > 0
         ? formatMinutesSeconds(retryRemaining)

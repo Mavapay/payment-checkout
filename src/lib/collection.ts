@@ -13,7 +13,13 @@ import {
 } from "@/types/primitives";
 
 import { minorToMajor, parseBackendAmount } from "./amount";
-import { networkFailureMessage, userMessageForCheckoutError } from "./payment-errors";
+import {
+  lockContentionMessage,
+  networkFailureMessage,
+  rateLimitMessage,
+  temporaryFailureMessage,
+  userMessageForCheckoutError,
+} from "./payment-errors";
 
 const asRecord = (value: unknown): Record<string, unknown> | null => {
   if (!value || typeof value !== "object" || Array.isArray(value)) {
@@ -127,7 +133,7 @@ export const parseRetryAfterSeconds = (header: unknown): number | undefined => {
   return Math.max(0, Math.ceil((date - Date.now()) / 1000));
 };
 
-export const shouldReuseRequest = (
+const keepsOriginalRequest = (
   code: string | undefined,
   httpStatus: number | undefined,
   network: boolean,
@@ -137,21 +143,36 @@ export const shouldReuseRequest = (
     code === CheckoutErrorCodes.ORDER_FAILED ||
     code === CheckoutErrorCodes.PAYMENT_ALREADY_RECEIVED ||
     code === CheckoutErrorCodes.PROMPT_RETRY_TOO_EARLY ||
+    code === CheckoutErrorCodes.COLLECTION_NOT_SUBMITTED ||
     code === CheckoutErrorCodes.COLLECTION_UNCONFIRMED ||
     code === CheckoutErrorCodes.LEGACY_COLLECTION_ADOPTED
   ) {
     return false;
   }
-  if (network) {
+  if (httpStatus === 429) {
+    return false;
+  }
+  if (network || httpStatus === 408 || httpStatus === 409) {
     return true;
   }
-  if (httpStatus === 408) {
-    return true;
+  return httpStatus !== undefined && httpStatus >= 500;
+};
+
+export const shouldReuseRequest = (
+  code: string | undefined,
+  httpStatus: number | undefined,
+  network: boolean,
+): boolean => keepsOriginalRequest(code, httpStatus, network);
+
+export const shouldAutoRetry = (
+  code: string | undefined,
+  httpStatus: number | undefined,
+  network: boolean,
+): boolean => {
+  if (!keepsOriginalRequest(code, httpStatus, network)) {
+    return false;
   }
-  if (httpStatus !== undefined && httpStatus >= 500) {
-    return true;
-  }
-  return false;
+  return network || httpStatus === 408;
 };
 
 export const shouldResumePolling = (
@@ -185,19 +206,27 @@ export const normalizeCheckoutError = (
   const retryAfterSeconds = parseRetryAfterSeconds(
     record?.retryAfterSeconds ?? retryAfterHeader,
   );
+  const codedMessage = userMessageForCheckoutError(code, message);
+  let userMessage = network ? networkFailureMessage() : codedMessage;
+  if (!network && !code && httpStatus === 409) {
+    userMessage = lockContentionMessage();
+  } else if (!network && !code && httpStatus === 429) {
+    userMessage = rateLimitMessage();
+  } else if (!network && !code && httpStatus !== undefined && httpStatus >= 500) {
+    userMessage = temporaryFailureMessage();
+  }
 
   return {
     httpStatus,
     code,
     message: message || "",
-    userMessage: network
-      ? networkFailureMessage()
-      : userMessageForCheckoutError(code, message),
+    userMessage,
     retryAfterSeconds,
     paymentLinkOrderId,
     collection,
     network,
     reuseRequest: shouldReuseRequest(code, httpStatus, network),
+    autoRetry: shouldAutoRetry(code, httpStatus, network),
     resumePolling: shouldResumePolling(code, paymentLinkOrderId),
   };
 };

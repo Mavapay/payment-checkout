@@ -59,6 +59,23 @@ export function MobileMoneyCheckout({
   const promptTimedOut = view.promptStatus === PromptStatuses.TIMED_OUT;
   const canProceed =
     showInstructions && view.phase !== CheckoutPhases.FAILED && !view.settled;
+  const sameRequestWaiting =
+    view.phase === CheckoutPhases.NEEDS_RETRY && !checkout.canRetrySubmission;
+  const sendLabel = checkout.isSubmitting
+    ? "Sending..."
+    : view.collectionNotSubmitted
+      ? `Resend Prompt${
+          checkout.retryCountdownLabel && !checkout.canRequestAnother
+            ? ` ${checkout.retryCountdownLabel}`
+            : ""
+        }`
+      : view.phase === CheckoutPhases.NEEDS_RETRY
+        ? `Retry submission${
+            sameRequestWaiting && checkout.retryCountdownLabel
+              ? ` ${checkout.retryCountdownLabel}`
+              : ""
+          }`
+        : "Send payment prompt";
 
   const handleProceed = async () => {
     if (!view.pollOrderId || isConfirming || checkout.isSubmitting) return;
@@ -172,14 +189,14 @@ export function MobileMoneyCheckout({
               )}
               <Button
                 type="submit"
-                disabled={checkout.isSubmitting}
+                disabled={
+                  checkout.isSubmitting ||
+                  (view.collectionNotSubmitted && !checkout.canRequestAnother) ||
+                  sameRequestWaiting
+                }
                 className={greenButtonClassName}
               >
-                {checkout.isSubmitting
-                  ? "Sending..."
-                  : checkout.canRetrySubmission
-                    ? "Retry submission"
-                    : "Send payment prompt"}
+                {sendLabel}
               </Button>
             </form>
           )}
@@ -215,16 +232,20 @@ export function MobileMoneyCheckout({
             {isConfirming ? "Processing..." : "I have Paid"}
           </Button>
         )}
-        {checkout.canRetrySubmission && showInstructions && (
+        {view.phase === CheckoutPhases.NEEDS_RETRY && showInstructions && (
           <Button
             onClick={checkout.retry}
-            disabled={checkout.isSubmitting}
+            disabled={!checkout.canRetrySubmission || checkout.isSubmitting}
             className={greenButtonClassName}
           >
             Retry submission
+            {sameRequestWaiting && checkout.retryCountdownLabel
+              ? ` ${checkout.retryCountdownLabel}`
+              : ""}
           </Button>
         )}
-        {(showInstructions || view.phase === CheckoutPhases.REQUEST_ID_REUSED) &&
+        {view.phase !== CheckoutPhases.NEEDS_RETRY &&
+          (showInstructions || view.phase === CheckoutPhases.REQUEST_ID_REUSED) &&
           !checkout.quoteExpired && (
           <Button
             variant="outline"

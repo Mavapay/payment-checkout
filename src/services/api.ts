@@ -240,6 +240,7 @@ export async function submitPaymentLinkCheckout(input: {
     );
     if (!details) {
       error.reuseRequest = true;
+      error.autoRetry = true;
       error.userMessage = error.userMessage || networkFailureMessage();
     }
     return { ok: false, error };

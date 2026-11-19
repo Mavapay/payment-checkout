@@ -15,6 +15,8 @@ export const userMessageForCheckoutError = (
       return "Please wait before requesting another prompt.";
     case CheckoutErrorCodes.REQUEST_ID_REUSED:
       return "Those payer details do not match the original attempt. Request another prompt only after it is allowed. A new prompt was not sent.";
+    case CheckoutErrorCodes.COLLECTION_NOT_SUBMITTED:
+      return "The payment prompt was not sent. You can try again when a new attempt is allowed.";
     case CheckoutErrorCodes.COLLECTION_UNCONFIRMED:
       return "We could not confirm the prompt yet. This page will keep checking the payment.";
     case CheckoutErrorCodes.PAYMENT_ALREADY_RECEIVED:
@@ -40,4 +42,16 @@ export const userMessageForCheckoutError = (
 
 export const networkFailureMessage = (): string => {
   return "The connection was interrupted. The original attempt was kept so a duplicate prompt is not sent. Retry the submission.";
+};
+
+export const temporaryFailureMessage = (): string => {
+  return "Something went wrong for a moment. Your attempt was kept. Retry the submission.";
+};
+
+export const lockContentionMessage = (): string => {
+  return "The payment service is busy. This attempt was kept. Retry the same submission when it is allowed.";
+};
+
+export const rateLimitMessage = (): string => {
+  return "Please wait before requesting another prompt.";
 };

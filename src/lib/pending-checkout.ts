@@ -12,6 +12,7 @@ export interface PendingCheckoutRecord {
   attemptId?: string;
   internalOrderId?: string;
   canRetry?: boolean;
+  collectionNotSubmitted?: boolean;
   retryAllowedAt?: string;
   quoteExpiresAt?: string;
   serverTime?: string;
@@ -72,6 +73,7 @@ export const pendingFromView = (
     attemptId: view.attemptId,
     internalOrderId: view.internalOrderId,
     canRetry: view.canRetry,
+    collectionNotSubmitted: view.collectionNotSubmitted,
     retryAllowedAt: view.retryAllowedAt,
     quoteExpiresAt: view.quoteExpiresAt,
     serverTime: view.serverTime,
@@ -100,6 +102,9 @@ export const viewPhaseFromPending = (
   }
   if (record.phase === CheckoutPhases.QUOTE_EXPIRED) {
     return CheckoutPhases.QUOTE_EXPIRED;
+  }
+  if (record.collectionNotSubmitted && !record.paymentLinkOrderId) {
+    return CheckoutPhases.PENDING;
   }
   if (record.paymentLinkOrderId) {
     return CheckoutPhases.PENDING;

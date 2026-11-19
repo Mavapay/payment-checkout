@@ -232,6 +232,7 @@ export interface NormalizedCheckoutError {
   collection?: CollectionMetadata;
   network: boolean;
   reuseRequest: boolean;
+  autoRetry: boolean;
   resumePolling: boolean;
   cancelled?: boolean;
 }
